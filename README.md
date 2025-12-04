@@ -1,4 +1,4 @@
-# 🚀 Media Downloader - Full-Stack Application
+# 🚀 Universal Media Downloader - Full-Stack Application
 
 <div align="center">
 
