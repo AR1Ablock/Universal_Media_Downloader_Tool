@@ -29,6 +29,8 @@
 - **Pause/Resume**: Stop and continue downloads anytime
 - **Parallel downloads**: Multiple simultaneous downloads supported
 
+<br/>
+
 ### 🔧 **Technical Features**
 
 - **Background cleanup**: Automatic removal of completed (3h) and stuck (6h) downloads
@@ -38,6 +40,8 @@
 - **Authentication**: Simple user-based session management
 - **Responsive UI**: Mobile-friendly Vue.js 3 interface
 
+<br/>
+
 ### ⚡ **Performance Optimizations**
 
 - Parallel processing for cleanup operations
@@ -46,6 +50,14 @@
 - Efficient artifact cleanup with regex patterns
 
 <br/>
+
+### 💾 Downloads Storage Location
+
+- Your downloaded media files will be stored on default Video directory of your OS.
+
+<br/>
+
+---
 
 ## 🏗️ Architecture
 
