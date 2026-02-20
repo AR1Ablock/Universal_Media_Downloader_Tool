@@ -14,12 +14,15 @@ jobs:
           - os: windows-latest
             runtime: win-x64
             artifact: MediaDownloader-Windows-x64
+            tools: "ffmpeg.exe|yt-dlp.exe"   # Only Windows files
           - os: ubuntu-latest
             runtime: linux-x64
             artifact: MediaDownloader-Linux-x64
+            tools: "ffmpeg|yt-dlp"           # Only Linux files
           - os: macos-latest
             runtime: osx-x64
             artifact: MediaDownloader-macOS-x64
+            tools: "ffmpeg_mac|yt-dlp_mac"   # Only macOS files
 
     runs-on: ${{ matrix.os }}
 
@@ -32,11 +35,7 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: 🔍 Show folder structure
-        run: ls -R | head -n 120
-        shell: bash
-
-      - name: Publish the app
+      - name: Publish optimized single-file
         run: |
           dotnet publish "Downloader_Backend_(Both_Stacks_Here)/Downloader_Backend.csproj" \
             -c Release \
@@ -44,14 +43,27 @@ jobs:
             --self-contained true \
             -p:PublishSingleFile=true \
             -p:IncludeAllContentForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true \
             -o publish
         shell: bash
 
-      - name: Fix permissions & Create installer
+      - name: Keep only OS-specific tools + Fix permissions + Copy favicon (Linux)
         run: |
-          # Make all tools executable (they live in publish/tools/)
-          find publish -name "yt-dlp*" -o -name "ffmpeg*" -o -name "Downloader_Backend" | xargs chmod +x 2>/dev/null || true
+          cd publish/tools
+          # Delete all tools except the ones needed for this OS
+          ls | grep -vE '${{ matrix.tools }}' | xargs rm -f 2>/dev/null || true
+          # Make remaining tools executable
+          chmod +x * 2>/dev/null || true
+          cd ..
 
+          # Linux only: copy favicon to root so desktop shortcut works
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            cp wwwroot/favicon.png .
+          fi
+        shell: bash
+
+      - name: Create installer
+        run: |
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             powershell -Command "Compress-Archive -Path publish/* -DestinationPath '${{ matrix.artifact }}.zip' -Force"
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
@@ -64,7 +76,6 @@ jobs:
               --prefix /opt/mediadownloader \
               --description "Universal Media Downloader" \
               .
-            # Move .deb to root for upload
             mv mediadownloader_1.0_amd64.deb $GITHUB_WORKSPACE/${{ matrix.artifact }}.deb
           else
             mkdir -p MediaDownloader.app/Contents/{MacOS,Resources}
@@ -72,7 +83,6 @@ jobs:
             cp Downloader_Backend_\(Both_Stacks_Here\)/Info.plist MediaDownloader.app/Contents/ 2>/dev/null || true
             cp -r publish/tools MediaDownloader.app/Contents/Resources/ 2>/dev/null || true
             cp -r publish/wwwroot MediaDownloader.app/Contents/Resources/ 2>/dev/null || true
-            
             brew install create-dmg
             create-dmg --volname "Media Downloader" \
                        --app-drop-link 600 185 \
