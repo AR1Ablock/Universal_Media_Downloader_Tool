@@ -14,16 +14,20 @@ jobs:
         with: { dotnet-version: '8.0.x' }
       - uses: actions/setup-node@v4
         with: { node-version: '20' }  # Adjust for your Vue version
+      - name: Debug Directory
+        run: |
+          pwd
+          ls -R
       - name: Publish Backend
         run: |
           cd 'Downloader_Backend_(Both_Stacks_Here)'
-          dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+          dotnet publish Downloader_Backend.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish/win-x64
       - name: Install WiX Toolset
         run: dotnet tool install --global wix --version 5.0.0
       - name: Build MSI with WiX
         run: |
           cd 'Downloader_Backend_(Both_Stacks_Here)'
-          wix build Installer.wixproj -o MediaDownloader.msi
+          wix build -o MediaDownloader.msi Product.wxs
       - uses: actions/upload-artifact@v4
         with: { name: windows-msi, path: 'Downloader_Backend_(Both_Stacks_Here)/MediaDownloader.msi' }
 
@@ -35,10 +39,14 @@ jobs:
         with: { dotnet-version: '8.0.x' }
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
+      - name: Debug Directory
+        run: |
+          pwd
+          ls -R
       - name: Publish Backend
         run: |
           cd Downloader_Backend_\(Both_Stacks_Here\)
-          dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -o publish/linux-x64
+          dotnet publish Downloader_Backend.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -o publish/linux-x64
       - name: Install fpm
         run: sudo apt update && sudo apt install ruby ruby-dev -y && sudo gem install fpm
       - name: Build DEB
@@ -54,23 +62,28 @@ jobs:
         with: { dotnet-version: '8.0.x' }
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
+      - name: Debug Directory
+        run: |
+          pwd
+          ls -R
       - name: Publish Backend
         run: |
           cd Downloader_Backend_\(Both_Stacks_Here\)
-          dotnet publish -c Release -r osx-x64 --self-contained true -p:PublishSingleFile=true -o publish/osx-x64
+          dotnet publish Downloader_Backend.csproj -c Release -r osx-x64 --self-contained true -p:PublishSingleFile=true -o publish/osx-x64
       - name: Create App Bundle
         run: |
           mkdir -p MediaDownloader.app/Contents/MacOS
+          mkdir -p MediaDownloader.app/Contents/Resources
           cp Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/Downloader_Backend MediaDownloader.app/Contents/MacOS/
           cp Downloader_Backend_\(Both_Stacks_Here\)/Info.plist MediaDownloader.app/Contents/
-          cp -r Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/tools MediaDownloader.app/Contents/Resources/  # Optional for tools
-          cp -r Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/wwwroot MediaDownloader.app/Contents/Resources/
+          cp -r Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/tools MediaDownloader.app/Contents/Resources/ || true  # Optional
+          cp -r Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/wwwroot MediaDownloader.app/Contents/Resources/ || true
       - name: Install create-dmg
         run: brew install create-dmg
       - name: Build DMG with Retry
         run: |
           for i in {1..3}; do
-            create-dmg --volname "MediaDownloader" --overwrite MediaDownloader.dmg MediaDownloader.app/ && break
+            create-dmg --volname "MediaDownloader" --app-drop-link 600 185 --overwrite MediaDownloader.dmg MediaDownloader.app/ && break
             echo "Retry $i failed, waiting 10s..."
             sleep 10
           done
