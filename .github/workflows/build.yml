@@ -13,25 +13,28 @@ jobs:
         include:
           - os: windows-latest
             runtime: win-x64
-            name: MediaDownloader-Windows-x64
-            ext: zip
+            artifact: MediaDownloader-Windows-x64
           - os: ubuntu-latest
             runtime: linux-x64
-            name: MediaDownloader-Linux-x64
-            ext: deb
+            artifact: MediaDownloader-Linux-x64
           - os: macos-latest
             runtime: osx-x64
-            name: MediaDownloader-macOS-x64
-            ext: dmg
+            artifact: MediaDownloader-macOS-x64
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true   # ← FIX: Fetch real LFS binaries (yt-dlp, ffmpeg)
 
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      - name: 🔍 Show folder structure
+        run: ls -R | head -n 120
+        shell: bash
 
       - name: Publish the app
         run: |
@@ -47,20 +50,25 @@ jobs:
       - name: Create installer / package
         run: |
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            powershell -Command "Compress-Archive -Path publish/* -DestinationPath '${{ matrix.name }}.${{ matrix.ext }}' -Force"
+            # Set exe perms (Windows ignores chmod, but just in case)
+            powershell -Command "Compress-Archive -Path publish/* -DestinationPath '${{ matrix.artifact }}.zip' -Force"
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             sudo apt update && sudo apt install -y ruby ruby-dev
             sudo gem install fpm
             cd publish
-            chmod +x Downloader_Backend
+            # FIX: Set executable perms on tools
+            chmod +x yt-dlp* ffmpeg* Downloader_Backend
+            # Create menu shortcut
             mkdir -p usr/share/applications
             cp $GITHUB_WORKSPACE/desktop.ini usr/share/applications/mediadownloader.desktop
             fpm --verbose -s dir -t deb -n mediadownloader -v 1.0 \
               --prefix /opt/mediadownloader \
               --description "Universal Media Downloader" \
               .
-            mv mediadownloader_1.0_amd64.deb $GITHUB_WORKSPACE/${{ matrix.name }}.${{ matrix.ext }}
+            mv mediadownloader_1.0_amd64.deb $GITHUB_WORKSPACE/${{ matrix.artifact }}.deb
           else
+            # FIX: Set executable perms on tools
+            chmod +x publish/yt-dlp* publish/ffmpeg* publish/Downloader_Backend
             mkdir -p MediaDownloader.app/Contents/{MacOS,Resources}
             cp publish/Downloader_Backend* MediaDownloader.app/Contents/MacOS/ 2>/dev/null || true
             cp Downloader_Backend_\(Both_Stacks_Here\)/Info.plist MediaDownloader.app/Contents/ 2>/dev/null || true
@@ -70,12 +78,12 @@ jobs:
             brew install create-dmg
             create-dmg --volname "Media Downloader" \
                        --app-drop-link 600 185 \
-                       "${{ matrix.name }}.${{ matrix.ext }}" \
+                       "${{ matrix.artifact }}.dmg" \
                        MediaDownloader.app/
           fi
         shell: bash
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.name }}
-          path: ${{ matrix.name }}.${{ matrix.ext }}
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.*
