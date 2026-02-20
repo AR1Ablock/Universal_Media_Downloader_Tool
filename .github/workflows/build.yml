@@ -2,8 +2,8 @@ name: Build MediaDownloader
 
 on:
   push:
-    tags:
-      - 'v*'   # Trigger only on tags (git tag v1.0 && git push --tags)
+    paths:
+      - '.github/workflows/build.yml'
 
 jobs:
   build:
