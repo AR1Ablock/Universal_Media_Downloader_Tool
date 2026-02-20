@@ -1,0 +1,8 @@
+<Project Sdk="WixToolset.Sdk/5.0.0">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="Downloader_Backend.csproj" Publish="true" />
+  </ItemGroup>
+</Project>
