@@ -13,13 +13,16 @@ jobs:
         include:
           - os: windows-latest
             runtime: win-x64
-            artifact: MediaDownloader-Windows-x64
+            name: MediaDownloader-Windows-x64
+            ext: zip
           - os: ubuntu-latest
             runtime: linux-x64
-            artifact: MediaDownloader-Linux-x64
+            name: MediaDownloader-Linux-x64
+            ext: deb
           - os: macos-latest
             runtime: osx-x64
-            artifact: MediaDownloader-macOS-x64
+            name: MediaDownloader-macOS-x64
+            ext: dmg
 
     runs-on: ${{ matrix.os }}
 
@@ -29,10 +32,6 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
-      - name: 🔍 Show folder structure
-        run: ls -R | head -n 120
-        shell: bash
 
       - name: Publish the app
         run: |
@@ -47,23 +46,20 @@ jobs:
 
       - name: Create installer / package
         run: |
-          rm -f "${{ matrix.artifact }}.zip" "${{ matrix.artifact }}.deb" "${{ matrix.artifact }}.dmg" 2>/dev/null || true
-          
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            powershell -Command "Compress-Archive -Path publish/* -DestinationPath '${{ matrix.artifact }}.zip' -Force"
+            powershell -Command "Compress-Archive -Path publish/* -DestinationPath '${{ matrix.name }}.${{ matrix.ext }}' -Force"
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             sudo apt update && sudo apt install -y ruby ruby-dev
             sudo gem install fpm
             cd publish
-            # Make binary executable
             chmod +x Downloader_Backend
-            # Create menu shortcut (fixed path)
             mkdir -p usr/share/applications
             cp $GITHUB_WORKSPACE/desktop.ini usr/share/applications/mediadownloader.desktop
             fpm --verbose -s dir -t deb -n mediadownloader -v 1.0 \
               --prefix /opt/mediadownloader \
               --description "Universal Media Downloader" \
               .
+            mv mediadownloader_1.0_amd64.deb $GITHUB_WORKSPACE/${{ matrix.name }}.${{ matrix.ext }}
           else
             mkdir -p MediaDownloader.app/Contents/{MacOS,Resources}
             cp publish/Downloader_Backend* MediaDownloader.app/Contents/MacOS/ 2>/dev/null || true
@@ -74,15 +70,12 @@ jobs:
             brew install create-dmg
             create-dmg --volname "Media Downloader" \
                        --app-drop-link 600 185 \
-                       "${{ matrix.artifact }}.dmg" \
+                       "${{ matrix.name }}.${{ matrix.ext }}" \
                        MediaDownloader.app/
           fi
         shell: bash
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: |
-            *.zip
-            *.deb
-            *.dmg
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}.${{ matrix.ext }}
