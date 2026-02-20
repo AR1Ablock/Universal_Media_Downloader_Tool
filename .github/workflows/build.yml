@@ -14,15 +14,15 @@ jobs:
           - os: windows-latest
             runtime: win-x64
             artifact: MediaDownloader-Windows-x64
-            tools: "ffmpeg.exe|yt-dlp.exe"   # Only Windows files
+            tools: "ffmpeg.exe|yt-dlp.exe"
           - os: ubuntu-latest
             runtime: linux-x64
             artifact: MediaDownloader-Linux-x64
-            tools: "ffmpeg|yt-dlp"           # Only Linux files
+            tools: "ffmpeg|yt-dlp"
           - os: macos-latest
             runtime: osx-x64
             artifact: MediaDownloader-macOS-x64
-            tools: "ffmpeg_mac|yt-dlp_mac"   # Only macOS files
+            tools: "ffmpeg_mac|yt-dlp_mac"
 
     runs-on: ${{ matrix.os }}
 
@@ -47,18 +47,22 @@ jobs:
             -o publish
         shell: bash
 
-      - name: Keep only OS-specific tools + Fix permissions + Copy favicon (Linux)
+      - name: Copy tools + wwwroot + Keep only OS-specific tools + Fix permissions + Favicon
         run: |
-          cd publish/tools
-          # Delete all tools except the ones needed for this OS
+          # Explicitly copy tools and wwwroot (this fixes macOS "no such directory")
+          cp -r "Downloader_Backend_(Both_Stacks_Here)/tools" publish/ 2>/dev/null || true
+          cp -r "Downloader_Backend_(Both_Stacks_Here)/wwwroot" publish/ 2>/dev/null || true
+
+          cd publish/tools || true
+          # Delete unwanted tools (keep only OS-specific)
           ls | grep -vE '${{ matrix.tools }}' | xargs rm -f 2>/dev/null || true
-          # Make remaining tools executable
+          # Make all remaining tools executable
           chmod +x * 2>/dev/null || true
           cd ..
 
-          # Linux only: copy favicon to root so desktop shortcut works
+          # Linux only: copy favicon to root for desktop shortcut
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            cp wwwroot/favicon.png .
+            cp publish/wwwroot/favicon.png publish/ || true
           fi
         shell: bash
 
