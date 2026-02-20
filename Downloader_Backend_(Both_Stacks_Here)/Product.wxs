@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v5/wxs">
-  <Product Id="*" Name="MediaDownloader" Language="1033" Version="1.0.0.0" Manufacturer="AR1Ablock" UpgradeCode="PUT-GUID-HERE">
+  <Product Id="*" Name="MediaDownloader" Language="1033" Version="1.0.0.0" Manufacturer="AR1Ablock" UpgradeCode="bb5878d4-502f-49f3-adb1-e90890b6cf0f">
     <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
     <MajorUpgrade DowngradeErrorMessage="A newer version is installed." />
     <MediaTemplate EmbedCab="yes" />
