@@ -1,0 +1,102 @@
+name: Build MediaDownloader
+
+on:
+  push:
+    tags:
+      - 'v*'   # Trigger only on tags (git tag v1.0 && git push --tags)
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: windows-latest
+            runtime: win-x64
+          - os: ubuntu-latest
+            runtime: linux-x64
+          - os: macos-latest
+            runtime: osx-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # ==================== DEBUG (this will show us everything) ====================
+      - name: 🔍 Debug - Full Directory Structure
+        run: |
+          echo "=== Current folder ==="
+          pwd
+          echo "=== All files & folders ==="
+          ls -R | head -n 100
+        shell: bash
+
+      # ==================== AUTO-FIND PROJECT & PUBLISH ====================
+      - name: Find .csproj & Publish
+        run: |
+          PROJECT=$(find . -name "*.csproj" | head -n 1)
+          if [ -z "$PROJECT" ]; then
+            echo "❌ No .csproj file found anywhere!"
+            exit 1
+          fi
+          echo "✅ Found project: $PROJECT"
+          
+          cd "$(dirname "$PROJECT")"
+          dotnet publish -c Release \
+            -r ${{ matrix.runtime }} \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeAllContentForSelfExtract=true \
+            -o ./publish
+        shell: bash
+
+      # ==================== CREATE INSTALLERS ====================
+      - name: Create Windows ZIP (simple installer)
+        if: matrix.os == 'windows-latest'
+        run: |
+          Compress-Archive -Path publish/* -DestinationPath MediaDownloader-Windows-x64.zip
+        shell: pwsh
+
+      - name: Create Linux DEB
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt update && sudo apt install ruby ruby-dev -y
+          sudo gem install fpm
+          cd publish
+          fpm --verbose -s dir -t deb -n mediadownloader -v 1.0 \
+            --prefix /opt/mediadownloader \
+            --description "Universal Media Downloader" \
+            .
+        shell: bash
+
+      - name: Create macOS DMG
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd publish
+          mkdir -p "MediaDownloader.app/Contents/MacOS" "MediaDownloader.app/Contents/Resources"
+          cp Downloader_Backend "MediaDownloader.app/Contents/MacOS/" 2>/dev/null || cp Downloader_Backend* "MediaDownloader.app/Contents/MacOS/"
+          cp ../../Info.plist "MediaDownloader.app/Contents/" 2>/dev/null || true
+          cp -r tools "MediaDownloader.app/Contents/Resources/" 2>/dev/null || true
+          cp -r wwwroot "MediaDownloader.app/Contents/Resources/" 2>/dev/null || true
+          
+          brew install create-dmg
+          create-dmg --volname "MediaDownloader" \
+                     --app-drop-link 600 185 \
+                     --overwrite \
+                     ../MediaDownloader-macOS-x64.dmg \
+                     MediaDownloader.app/
+        shell: bash
+
+      # Upload everything
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.runtime }}
+          path: |
+            *.zip
+            *.deb
+            *.dmg
