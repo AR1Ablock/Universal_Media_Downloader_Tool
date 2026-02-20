@@ -26,15 +26,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          lfs: true   # ← FIX: Fetch real LFS binaries (yt-dlp, ffmpeg)
+          lfs: true
 
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
-      - name: 🔍 Show folder structure
-        run: ls -R | head -n 120
-        shell: bash
 
       - name: Publish the app
         run: |
@@ -47,18 +43,21 @@ jobs:
             -o publish
         shell: bash
 
+      # ←←← THIS IS THE KEY FIX ←←←
+      - name: Copy tools as loose files + make executable
+        run: |
+          cp -r "Downloader_Backend_(Both_Stacks_Here)/tools" publish/
+          chmod +x publish/tools/* publish/Downloader_Backend 2>/dev/null || true
+        shell: bash
+
       - name: Create installer / package
         run: |
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            # Set exe perms (Windows ignores chmod, but just in case)
             powershell -Command "Compress-Archive -Path publish/* -DestinationPath '${{ matrix.artifact }}.zip' -Force"
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             sudo apt update && sudo apt install -y ruby ruby-dev
             sudo gem install fpm
             cd publish
-            # FIX: Set executable perms on tools
-            chmod +x yt-dlp* ffmpeg* Downloader_Backend
-            # Create menu shortcut
             mkdir -p usr/share/applications
             cp $GITHUB_WORKSPACE/desktop.ini usr/share/applications/mediadownloader.desktop
             fpm --verbose -s dir -t deb -n mediadownloader -v 1.0 \
@@ -67,8 +66,6 @@ jobs:
               .
             mv mediadownloader_1.0_amd64.deb $GITHUB_WORKSPACE/${{ matrix.artifact }}.deb
           else
-            # FIX: Set executable perms on tools
-            chmod +x publish/yt-dlp* publish/ffmpeg* publish/Downloader_Backend
             mkdir -p MediaDownloader.app/Contents/{MacOS,Resources}
             cp publish/Downloader_Backend* MediaDownloader.app/Contents/MacOS/ 2>/dev/null || true
             cp Downloader_Backend_\(Both_Stacks_Here\)/Info.plist MediaDownloader.app/Contents/ 2>/dev/null || true
