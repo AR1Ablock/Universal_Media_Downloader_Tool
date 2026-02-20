@@ -3,7 +3,7 @@ name: Build MediaDownloader
 on:
   push:
     paths:
-      - '.github/workflows/build.yml'   # ← Triggers ONLY when you edit this file
+      - '.github/workflows/build.yml'
 
 jobs:
   build:
@@ -30,11 +30,11 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: 🔍 Show folder structure (for debugging)
+      - name: 🔍 Show folder structure
         run: ls -R | head -n 120
         shell: bash
 
-      - name: Publish the app (this was the broken step)
+      - name: Publish the app
         run: |
           dotnet publish "Downloader_Backend_(Both_Stacks_Here)/Downloader_Backend.csproj" \
             -c Release \
@@ -47,6 +47,8 @@ jobs:
 
       - name: Create installer / package
         run: |
+          rm -f "${{ matrix.artifact }}.zip" "${{ matrix.artifact }}.deb" "${{ matrix.artifact }}.dmg" 2>/dev/null || true
+          
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             powershell -Command "Compress-Archive -Path publish/* -DestinationPath '${{ matrix.artifact }}.zip' -Force"
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
@@ -67,7 +69,6 @@ jobs:
             brew install create-dmg
             create-dmg --volname "Media Downloader" \
                        --app-drop-link 600 185 \
-                       --overwrite \
                        "${{ matrix.artifact }}.dmg" \
                        MediaDownloader.app/
           fi
