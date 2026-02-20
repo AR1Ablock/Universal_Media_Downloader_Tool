@@ -55,9 +55,14 @@ jobs:
             sudo apt update && sudo apt install -y ruby ruby-dev
             sudo gem install fpm
             cd publish
+            # Create proper .desktop shortcut (this replaces the broken --deb-desktop)
+            mkdir -p usr/share/applications
+            cp ../../desktop.ini usr/share/applications/mediadownloader.desktop
+            # Make sure binary is executable
+            chmod +x Downloader_Backend
             fpm --verbose -s dir -t deb -n mediadownloader -v 1.0 \
               --prefix /opt/mediadownloader \
-              --deb-desktop ../../desktop.ini \
+              --description "Universal Media Downloader" \
               .
           else
             mkdir -p MediaDownloader.app/Contents/{MacOS,Resources}
