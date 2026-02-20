@@ -1,88 +1,102 @@
-name: Build and Package MediaDownloader
+name: Build MediaDownloader
 
 on:
   push:
     tags:
-      - 'v*'  # Trigger on tags like v1.0
+      - 'v*'   # Trigger only on tags (git tag v1.0 && git push --tags)
 
 jobs:
-  windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: windows-latest
+            runtime: win-x64
+          - os: ubuntu-latest
+            runtime: linux-x64
+          - os: macos-latest
+            runtime: osx-x64
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-dotnet@v4
-        with: { dotnet-version: '8.0.x' }
-      - name: Debug Directory
+        with:
+          dotnet-version: '8.0.x'
+
+      # ==================== DEBUG (this will show us everything) ====================
+      - name: 🔍 Debug - Full Directory Structure
         run: |
+          echo "=== Current folder ==="
           pwd
-          ls -R
-      - name: Publish Backend
-        run: |
-          cd 'Downloader_Backend_(Both_Stacks_Here)'
-          dotnet publish Downloader_Backend.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish/win-x64
-      - name: Install WiX Toolset
-        run: dotnet tool install --global wix --version 5.0.0
-      - name: Add WiX to PATH
-        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+          echo "=== All files & folders ==="
+          ls -R | head -n 100
         shell: bash
-      - name: Build MSI with WiX
-        run: |
-          cd 'Downloader_Backend_(Both_Stacks_Here)'
-          wix build -o MediaDownloader.msi Product.wxs
-      - uses: actions/upload-artifact@v4
-        with: { name: windows-msi, path: 'Downloader_Backend_(Both_Stacks_Here)/MediaDownloader.msi' }
 
-  linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with: { dotnet-version: '8.0.x' }
-      - name: Debug Directory
+      # ==================== AUTO-FIND PROJECT & PUBLISH ====================
+      - name: Find .csproj & Publish
         run: |
-          pwd
-          ls -R
-      - name: Publish Backend
-        run: |
-          cd Downloader_Backend_\(Both_Stacks_Here\)
-          dotnet publish Downloader_Backend.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -o publish/linux-x64
-      - name: Install fpm
-        run: sudo apt update && sudo apt install ruby ruby-dev -y && sudo gem install fpm
-      - name: Build DEB
-        run: fpm --verbose -s dir -t deb -n mediadownloader -v 1.0 --prefix /opt/mediadownloader --description "Media Downloader App" --deb-desktop ../desktop.ini publish/linux-x64/=.
-      - uses: actions/upload-artifact@v4
-        with: { name: linux-deb, path: '*.deb' }
+          PROJECT=$(find . -name "*.csproj" | head -n 1)
+          if [ -z "$PROJECT" ]; then
+            echo "❌ No .csproj file found anywhere!"
+            exit 1
+          fi
+          echo "✅ Found project: $PROJECT"
+          
+          cd "$(dirname "$PROJECT")"
+          dotnet publish -c Release \
+            -r ${{ matrix.runtime }} \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeAllContentForSelfExtract=true \
+            -o ./publish
+        shell: bash
 
-  macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with: { dotnet-version: '8.0.x' }
-      - name: Debug Directory
+      # ==================== CREATE INSTALLERS ====================
+      - name: Create Windows ZIP (simple installer)
+        if: matrix.os == 'windows-latest'
         run: |
-          pwd
-          ls -R
-      - name: Publish Backend
+          Compress-Archive -Path publish/* -DestinationPath MediaDownloader-Windows-x64.zip
+        shell: pwsh
+
+      - name: Create Linux DEB
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          cd Downloader_Backend_\(Both_Stacks_Here\)
-          dotnet publish Downloader_Backend.csproj -c Release -r osx-x64 --self-contained true -p:PublishSingleFile=true -o publish/osx-x64
-      - name: Create App Bundle
+          sudo apt update && sudo apt install ruby ruby-dev -y
+          sudo gem install fpm
+          cd publish
+          fpm --verbose -s dir -t deb -n mediadownloader -v 1.0 \
+            --prefix /opt/mediadownloader \
+            --description "Universal Media Downloader" \
+            .
+        shell: bash
+
+      - name: Create macOS DMG
+        if: matrix.os == 'macos-latest'
         run: |
-          mkdir -p MediaDownloader.app/Contents/MacOS
-          mkdir -p MediaDownloader.app/Contents/Resources
-          cp ./Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/Downloader_Backend MediaDownloader.app/Contents/MacOS/
-          cp ./Downloader_Backend_\(Both_Stacks_Here\)/Info.plist MediaDownloader.app/Contents/
-          cp -r ./Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/tools MediaDownloader.app/Contents/Resources/ || true  # Optional
-          cp -r ./Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/wwwroot MediaDownloader.app/Contents/Resources/ || true
-      - name: Install create-dmg
-        run: brew install create-dmg
-      - name: Build DMG with Retry
-        run: |
-          for i in {1..3}; do
-            create-dmg --volname "MediaDownloader" --app-drop-link 600 185 --overwrite MediaDownloader.dmg MediaDownloader.app/ && break
-            echo "Retry $i failed, waiting 10s..."
-            sleep 10
-          done
+          cd publish
+          mkdir -p "MediaDownloader.app/Contents/MacOS" "MediaDownloader.app/Contents/Resources"
+          cp Downloader_Backend "MediaDownloader.app/Contents/MacOS/" 2>/dev/null || cp Downloader_Backend* "MediaDownloader.app/Contents/MacOS/"
+          cp ../../Info.plist "MediaDownloader.app/Contents/" 2>/dev/null || true
+          cp -r tools "MediaDownloader.app/Contents/Resources/" 2>/dev/null || true
+          cp -r wwwroot "MediaDownloader.app/Contents/Resources/" 2>/dev/null || true
+          
+          brew install create-dmg
+          create-dmg --volname "MediaDownloader" \
+                     --app-drop-link 600 185 \
+                     --overwrite \
+                     ../MediaDownloader-macOS-x64.dmg \
+                     MediaDownloader.app/
+        shell: bash
+
+      # Upload everything
       - uses: actions/upload-artifact@v4
-        with: { name: macos-dmg, path: '*.dmg' }
+        with:
+          name: installers-${{ matrix.runtime }}
+          path: |
+            *.zip
+            *.deb
+            *.dmg
