@@ -12,8 +12,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: '8.0.x' }
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }  # Adjust for your Vue version
       - name: Debug Directory
         run: |
           pwd
@@ -24,6 +22,9 @@ jobs:
           dotnet publish Downloader_Backend.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish/win-x64
       - name: Install WiX Toolset
         run: dotnet tool install --global wix --version 5.0.0
+      - name: Add WiX to PATH
+        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+        shell: bash
       - name: Build MSI with WiX
         run: |
           cd 'Downloader_Backend_(Both_Stacks_Here)'
@@ -37,8 +38,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: '8.0.x' }
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
       - name: Debug Directory
         run: |
           pwd
@@ -60,8 +59,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: '8.0.x' }
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
       - name: Debug Directory
         run: |
           pwd
@@ -74,10 +71,10 @@ jobs:
         run: |
           mkdir -p MediaDownloader.app/Contents/MacOS
           mkdir -p MediaDownloader.app/Contents/Resources
-          cp Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/Downloader_Backend MediaDownloader.app/Contents/MacOS/
-          cp Downloader_Backend_\(Both_Stacks_Here\)/Info.plist MediaDownloader.app/Contents/
-          cp -r Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/tools MediaDownloader.app/Contents/Resources/ || true  # Optional
-          cp -r Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/wwwroot MediaDownloader.app/Contents/Resources/ || true
+          cp ./Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/Downloader_Backend MediaDownloader.app/Contents/MacOS/
+          cp ./Downloader_Backend_\(Both_Stacks_Here\)/Info.plist MediaDownloader.app/Contents/
+          cp -r ./Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/tools MediaDownloader.app/Contents/Resources/ || true  # Optional
+          cp -r ./Downloader_Backend_\(Both_Stacks_Here\)/publish/osx-x64/wwwroot MediaDownloader.app/Contents/Resources/ || true
       - name: Install create-dmg
         run: brew install create-dmg
       - name: Build DMG with Retry
