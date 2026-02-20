@@ -1,0 +1,49 @@
+name: Build and Package MediaDownloader
+
+on: [push]  # Or on tags/releases for production
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '8.0.x' }
+      - run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish/win-x64
+      - name: Build MSI (using WiX or Advanced Installer)
+        uses: caphyon/advinst-github-action@v1  # For MSI; install WiX via dotnet tool if needed
+        with:
+          advinst-version: 'latest'  # Or use NSIS/WiX commands here
+          aip-path: Downloader_Backend/Downloader_Backend.aip  # If using Advanced Installer project
+          aip-build-name: DefaultBuild
+          aip-package-name: MediaDownloader.msi
+      - uses: actions/upload-artifact@v4
+        with: { name: windows-msi, path: '*.msi' }
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '8.0.x' }
+      - run: dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -o publish/linux-x64
+      - name: Install fpm
+        run: sudo apt install ruby ruby-dev && sudo gem install fpm
+      - name: Build DEB
+        run: fpm -s dir -t deb -n mediadownloader -v 1.0 --prefix /opt/mediadownloader publish/linux-x64/=.
+      - uses: actions/upload-artifact@v4
+        with: { name: linux-deb, path: '*.deb' }
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '8.0.x' }
+      - run: dotnet publish -c Release -r osx-x64 --self-contained true -p:PublishSingleFile=true -o publish/osx-x64
+      - name: Install create-dmg
+        run: brew install create-dmg
+      - name: Build DMG
+        run: create-dmg --volname "MediaDownloader" MediaDownloader.dmg publish/osx-x64/
+      - uses: actions/upload-artifact@v4
+        with: { name: macos-dmg, path: '*.dmg' }
