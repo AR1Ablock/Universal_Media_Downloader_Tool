@@ -4,6 +4,9 @@ using Downloader_Backend.Logic;
 using Downloader_Backend.Model;
 using Downloader_Backend.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
+using Spectre.Console;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -125,6 +128,21 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 
+
+var toolsPath = Path.Combine(AppContext.BaseDirectory, "tools");
+Console.WriteLine("\n---- Path of tools folder: ", toolsPath);
+if (Directory.Exists(toolsPath) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+{
+    Console.WriteLine("---- Start to Get file from tools folder\n");
+    foreach (var file in Directory.GetFiles(toolsPath))
+    {
+        Console.WriteLine("---- Getting and fix RW permission to file: " + file);
+        Process.Start("chmod", $"+x {file}")?.WaitForExit();
+    }
+    Console.WriteLine("\n---- End of Get file from tools folder and fix RW Permission\n");
+}
+
+
 var app = builder.Build();
 
 
@@ -155,12 +173,16 @@ using (var scope = app.Services.CreateScope())
 // --------------------
 // HTTP PIPELINE
 // --------------------
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.MapGet("/", () => "Media Downloader Home!");
 app.UseStaticFiles();
 app.MapControllers();
 app.MapFallbackToFile("index.html");
 
+
+/* 
+dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true
+ */
 
 // --------------------
 // START
@@ -168,7 +190,36 @@ app.MapFallbackToFile("index.html");
 try
 {
     Log.Information("Application starting...");
-    app.Run();
+    // Run server in background task
+    var serverTask = app.RunAsync();
+    try
+    {
+        var url = "http://localhost:5050/index.html";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            Process.Start("open", url);
+        }
+        else  // Linux
+        {
+            Process.Start("xdg-open", url);
+        }
+    }
+    catch (Exception ex)
+    {
+        // Fallback: Show message (Spectre.Console works cross-platform, even hidden)
+        AnsiConsole.Markup("[red]Failed to open browser automatically.[/]\n");
+        AnsiConsole.Markup("Please open your default browser and navigate to [blue]http://localhost:5050[/index.html].\n");
+        AnsiConsole.Markup("If no browser is installed, download one from [blue]https://www.google.com/chrome[/] or similar.\n");
+        AnsiConsole.Markup("Press any key to continue...");
+        Console.ReadKey();
+    }
+
+    // Wait for server to exit (e.g., on app close)
+    await serverTask;
 }
 catch (Exception ex)
 {
