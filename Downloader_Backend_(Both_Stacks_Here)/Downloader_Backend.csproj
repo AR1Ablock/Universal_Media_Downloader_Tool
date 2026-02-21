@@ -16,6 +16,7 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="7.0.0" />
+    <PackageReference Include="Spectre.Console" Version="0.54.0" />
     <!-- System.Management provides Management classes on Windows when used; include to satisfy references -->
     <PackageReference Include="System.Management" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
@@ -23,8 +24,37 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="tools/**" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
+<!-- 1️⃣ When -r is provided (publish or build with runtime) -->
+<ItemGroup Condition="'$(RuntimeIdentifier)' != '' and '$(RuntimeIdentifier)' == 'win-x64'">
+  <Content Include="tools\ffmpeg.exe" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools\yt-dlp.exe" CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
+
+<ItemGroup Condition="'$(RuntimeIdentifier)' != '' and '$(RuntimeIdentifier)' == 'linux-x64'">
+  <Content Include="tools/ffmpeg" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/yt-dlp" CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
+
+<ItemGroup Condition="'$(RuntimeIdentifier)' != '' and '$(RuntimeIdentifier)' == 'osx-x64'">
+  <Content Include="tools/ffmpeg_mac" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/yt-dlp_mac" CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
+
+
+<!-- 2️⃣ Fallback: No -r provided (normal build / debug / run) -->
+<ItemGroup Condition="'$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">
+  <Content Include="tools\ffmpeg.exe" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools\yt-dlp.exe" CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
+
+<ItemGroup Condition="'$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Linux'))">
+  <Content Include="tools/ffmpeg" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/yt-dlp" CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
+
+<ItemGroup Condition="'$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('OSX'))">
+  <Content Include="tools/ffmpeg_mac" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/yt-dlp_mac" CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
 
 </Project>
