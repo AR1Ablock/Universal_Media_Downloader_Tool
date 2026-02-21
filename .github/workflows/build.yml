@@ -72,9 +72,12 @@ jobs:
             curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o publish/tools/yt-dlp
             chmod +x publish/tools/yt-dlp
 
-            sudo apt install -y ffmpeg
-            cp $(which ffmpeg) publish/tools/ffmpeg
-            chmod +x publish/tools/ffmpeg
+          curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
+          -o ffmpeg.tar.xz
+          tar -xf ffmpeg.tar.xz
+          cp ffmpeg-*-amd64-static/ffmpeg publish/tools/ffmpeg
+          chmod +x publish/tools/ffmpeg
+
 
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
             echo "Downloading macOS binaries..."
@@ -82,9 +85,11 @@ jobs:
             curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos -o publish/tools/yt-dlp_mac
             chmod +x publish/tools/yt-dlp_mac
 
-            brew install ffmpeg
-            cp $(which ffmpeg) publish/tools/ffmpeg_mac
-            chmod +x publish/tools/ffmpeg_mac
+          curl -L https://evermeet.cx/ffmpeg/ffmpeg-6.1.zip \
+          -o ffmpeg.zip
+          unzip -q ffmpeg.zip
+          mv ffmpeg publish/tools/ffmpeg_mac
+          chmod +x publish/tools/ffmpeg_mac
 
           fi
         shell: bash
