@@ -104,6 +104,7 @@ jobs:
       - name: Build Windows Installer
         if: matrix.os == 'windows-latest'
         run: |
+          copy Installers_Resources\MediaDownloader.xml publish/
           copy Installers_Resources\installer.iss installer.iss
           iscc installer.iss
           move Output\MediaDownloaderInstaller.exe ${{ matrix.name }}.exe
@@ -113,58 +114,82 @@ jobs:
       # ==================== LINUX (.deb) ========================
       # ==========================================================
       - name: Build Linux .deb
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt update
-          sudo apt install -y ruby ruby-dev
-          sudo gem install fpm
+  if: matrix.os == 'ubuntu-latest'
+  run: |
+    sudo apt update
+    sudo apt install -y ruby ruby-dev
+    sudo gem install fpm
 
-          chmod +x publish/Downloader_Backend
-          chmod +x publish/tools/* || true
+    chmod +x publish/Downloader_Backend
+    chmod +x publish/tools/* || true
 
-          mkdir -p package/opt/mediadownloader
-          cp -r publish/* package/opt/mediadownloader/
+    # App files
+    mkdir -p package/opt/mediadownloader
+    cp -r publish/* package/opt/mediadownloader/
 
-          mkdir -p package/usr/share/applications
-          cp Installers_Resources/desktop.ini package/usr/share/applications/mediadownloader.desktop
+    # Service file
+    mkdir -p package/lib/systemd/user
+    cp Installers_Resources/mediadownloader.service package/lib/systemd/user/
 
-          fpm -s dir -t deb -n mediadownloader -v 1.0 \
-              --description "Universal Media Downloader" \
-              -C package \
-              .
+    # Postinst script
+    mkdir -p package/DEBIAN
+    cp Installers_Resources/postinst package/DEBIAN/
+    chmod 755 package/DEBIAN/postinst
 
-          mv mediadownloader_1.0_amd64.deb ${{ matrix.name }}.deb
-        shell: bash
+    # Desktop entry
+    mkdir -p package/usr/share/applications
+    cp Installers_Resources/mediadownloader.desktop package/usr/share/applications/
+
+    # Build .deb
+    fpm -s dir -t deb -n mediadownloader -v 1.0 \
+        --description "Universal Media Downloader" \
+        -C package \
+        .
+
+    mv mediadownloader_1.0_amd64.deb ${{ matrix.name }}.deb
+  shell: bash
 
       # ==========================================================
       # ==================== macOS (.app + .dmg) =================
       # ==========================================================
-      - name: Build macOS App + DMG
-        if: matrix.os == 'macos-latest'
-        run: |
-          mkdir -p MediaDownloader.app/Contents/MacOS
-          mkdir -p MediaDownloader.app/Contents/Resources
+      - name: Build macOS App + PKG
+  if: matrix.os == 'macos-latest'  
+  run: |
+    # Create .app bundle structure
+    mkdir -p MediaDownloader.app/Contents/MacOS
+    mkdir -p MediaDownloader.app/Contents/Resources
 
-          # Copy published backend
-          cp -r publish/* MediaDownloader.app/Contents/MacOS/
+    # Copy published backend
+    cp -r publish/* MediaDownloader.app/Contents/MacOS/
 
-          # Copy Info.plist
-          cp Installers_Resources/info.plist MediaDownloader.app/Contents/
+    # Copy Info.plist
+    cp Installers_Resources/info.plist MediaDownloader.app/Contents/
 
-          # Copy macOS icon
-          cp Installers_Resources/favicon.icns MediaDownloader.app/Contents/Resources/
+    # Copy macOS icon
+    cp Installers_Resources/favicon.icns MediaDownloader.app/Contents/Resources/
 
-          # Permissions
-          chmod +x MediaDownloader.app/Contents/MacOS/Downloader_Backend
-          chmod +x MediaDownloader.app/Contents/MacOS/tools/* || true
+    # Permissions
+    chmod +x MediaDownloader.app/Contents/MacOS/Downloader_Backend
+    chmod +x MediaDownloader.app/Contents/MacOS/tools/* || true
 
-          brew install create-dmg
+    # Prepare pkgbuild directories
+    mkdir -p Payload/Applications
+    cp -r MediaDownloader.app Payload/Applications/
 
-          create-dmg --volname "Media Downloader" \
-                     --app-drop-link 600 185 \
-                     "${{ matrix.name }}.dmg" \
-                     MediaDownloader.app
-        shell: bash
+    mkdir -p Scripts
+    cp Installers_Resources/postinstall Scripts/
+    cp Installers_Resources/com.mediadownloader.backend.plist Scripts/
+
+    chmod +x Scripts/postinstall
+
+    # Build the .pkg
+    pkgbuild \
+      --root Payload/Applications \
+      --identifier com.mediadownloader.pkg \
+      --version 1.0 \
+      --scripts Scripts \
+      MediaDownloader.pkg
+  shell: bash
 
       # ==========================================================
       # Upload Artifact
