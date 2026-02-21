@@ -15,15 +15,33 @@ namespace Downloader_Backend.Logic
 
         public static string Create_Log_Path()
         {
-            var logDir = Path.Combine(AppContext.BaseDirectory, "Logs");
+            string logDir;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                logDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "MediaDownloader", "Logs");
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                logDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    "Library", "Logs", "MediaDownloader");
+            }
+            else // Linux/Unix
+            {
+                logDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    ".local", "share", "MediaDownloader", "Logs");
+            }
+
             if (!Directory.Exists(logDir))
             {
-                Console.WriteLine("Creating Logs directory at: " + logDir);
                 Directory.CreateDirectory(logDir);
             }
-            Console.WriteLine("Logs directory already created at: " + logDir);
             return logDir;
         }
+
 
 
         public void Log_pids_tree(DownloadJob job)
