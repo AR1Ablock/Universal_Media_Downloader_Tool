@@ -9,7 +9,11 @@ using System.Diagnostics;
 using Spectre.Console;
 
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory
+});
 
 
 // --------------------
@@ -216,3 +220,4 @@ finally
 {
     Log.CloseAndFlush();
 }
+
