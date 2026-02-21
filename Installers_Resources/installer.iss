@@ -6,11 +6,11 @@ DefaultGroupName=Media Downloader
 OutputBaseFilename=MediaDownloaderInstaller
 Compression=lzma
 SolidCompression=yes
-SetupIconFile=publish\wwwroot\favicon.png
+SetupIconFile=Installers_Resources\favicon.ico
 
 [Files]
 Source: "publish\*"; DestDir: "{app}"; Flags: recursesubdirs
 
 [Icons]
-Name: "{group}\Media Downloader"; Filename: "{app}\Downloader_Backend"; IconFilename: "{app}\wwwroot\favicon.png"
-Name: "{commondesktop}\Media Downloader"; Filename: "{app}\Downloader_Backend"; IconFilename: "{app}\wwwroot\favicon.png"
+Name: "{group}\Media Downloader"; Filename: "{app}\Downloader_Backend.exe"; IconFilename: "{app}\wwwroot\favicon.png"
+Name: "{commondesktop}\Media Downloader"; Filename: "{app}\Downloader_Backend.exe"; IconFilename: "{app}\wwwroot\favicon.png"
