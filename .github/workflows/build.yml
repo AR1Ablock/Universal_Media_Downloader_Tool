@@ -22,7 +22,7 @@ jobs:
           - os: macos-latest
             runtime: osx-x64
             name: MediaDownloader-macOS-x64
-            ext: dmg
+            ext: pkg
 
     runs-on: ${{ matrix.os }}
 
@@ -47,55 +47,52 @@ jobs:
             -o publish
         shell: bash
 
-
-        # ==========================================================
+      # ==========================================================
       # Download yt-dlp & ffmpeg (Replace LFS pointers)
       # ==========================================================
       - name: Download Tools Binaries
         run: |
           mkdir -p publish/tools
-
           echo "Running on ${{ matrix.os }}"
 
+          # ================= WINDOWS =================
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            echo "Downloading Windows binaries..."
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe \
+              -o publish/tools/yt-dlp.exe
 
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -o publish/tools/yt-dlp.exe
-
-            curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -o ffmpeg.zip
-            unzip ffmpeg.zip
+            curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip \
+              -o ffmpeg.zip
+            unzip -q ffmpeg.zip
             cp ffmpeg-*/bin/ffmpeg.exe publish/tools/ffmpeg.exe
 
+          # ================= LINUX =================
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            echo "Downloading Linux binaries..."
-
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o publish/tools/yt-dlp
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
+              -o publish/tools/yt-dlp
             chmod +x publish/tools/yt-dlp
 
-          curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
-          -o ffmpeg.tar.xz
-          tar -xf ffmpeg.tar.xz
-          cp ffmpeg-*-amd64-static/ffmpeg publish/tools/ffmpeg
-          chmod +x publish/tools/ffmpeg
+            curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
+              -o ffmpeg.tar.xz
+            tar -xf ffmpeg.tar.xz
+            cp ffmpeg-*-amd64-static/ffmpeg publish/tools/ffmpeg
+            chmod +x publish/tools/ffmpeg
 
-
+          # ================= MACOS =================
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            echo "Downloading macOS binaries..."
-
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos -o publish/tools/yt-dlp_mac
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos \
+              -o publish/tools/yt-dlp_mac
             chmod +x publish/tools/yt-dlp_mac
 
-          curl -L https://evermeet.cx/ffmpeg/ffmpeg-6.1.zip \
-          -o ffmpeg.zip
-          unzip -q ffmpeg.zip
-          mv ffmpeg publish/tools/ffmpeg_mac
-          chmod +x publish/tools/ffmpeg_mac
-
+            curl -L https://evermeet.cx/ffmpeg/ffmpeg-6.1.zip \
+              -o ffmpeg.zip
+            unzip -q ffmpeg.zip
+            mv ffmpeg publish/tools/ffmpeg_mac
+            chmod +x publish/tools/ffmpeg_mac
           fi
         shell: bash
 
       # ==========================================================
-      # ==================== WINDOWS (Inno) ======================
+      # ==================== WINDOWS =============================
       # ==========================================================
       - name: Install Inno Setup
         if: matrix.os == 'windows-latest'
@@ -104,7 +101,7 @@ jobs:
       - name: Build Windows Installer
         if: matrix.os == 'windows-latest'
         run: |
-          copy Installers_Resources\MediaDownloader.xml publish/
+          copy Installers_Resources\MediaDownloader.xml publish\
           copy Installers_Resources\installer.iss installer.iss
           iscc installer.iss
           move Output\MediaDownloaderInstaller.exe ${{ matrix.name }}.exe
@@ -114,82 +111,67 @@ jobs:
       # ==================== LINUX (.deb) ========================
       # ==========================================================
       - name: Build Linux .deb
-  if: matrix.os == 'ubuntu-latest'
-  run: |
-    sudo apt update
-    sudo apt install -y ruby ruby-dev
-    sudo gem install fpm
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt update
+          sudo apt install -y ruby ruby-dev
+          sudo gem install fpm
 
-    chmod +x publish/Downloader_Backend
-    chmod +x publish/tools/* || true
+          chmod +x publish/Downloader_Backend
+          chmod +x publish/tools/* || true
 
-    # App files
-    mkdir -p package/opt/mediadownloader
-    cp -r publish/* package/opt/mediadownloader/
+          mkdir -p package/opt/mediadownloader
+          cp -r publish/* package/opt/mediadownloader/
 
-    # Service file
-    mkdir -p package/lib/systemd/user
-    cp Installers_Resources/mediadownloader.service package/lib/systemd/user/
+          mkdir -p package/lib/systemd/user
+          cp Installers_Resources/mediadownloader.service package/lib/systemd/user/
 
-    # Postinst script
-    mkdir -p package/DEBIAN
-    cp Installers_Resources/postinst package/DEBIAN/
-    chmod 755 package/DEBIAN/postinst
+          mkdir -p package/DEBIAN
+          cp Installers_Resources/postinst package/DEBIAN/
+          chmod 755 package/DEBIAN/postinst
 
-    # Desktop entry
-    mkdir -p package/usr/share/applications
-    cp Installers_Resources/mediadownloader.desktop package/usr/share/applications/
+          mkdir -p package/usr/share/applications
+          cp Installers_Resources/mediadownloader.desktop package/usr/share/applications/
 
-    # Build .deb
-    fpm -s dir -t deb -n mediadownloader -v 1.0 \
-        --description "Universal Media Downloader" \
-        -C package \
-        .
+          fpm -s dir -t deb -n mediadownloader -v 1.0 \
+              --description "Universal Media Downloader" \
+              -C package \
+              .
 
-    mv mediadownloader_1.0_amd64.deb ${{ matrix.name }}.deb
-  shell: bash
+          mv mediadownloader_1.0_amd64.deb ${{ matrix.name }}.deb
+        shell: bash
 
       # ==========================================================
-      # ==================== macOS (.app + .dmg) =================
+      # ==================== macOS (.app + PKG) ==================
       # ==========================================================
       - name: Build macOS App + PKG
-  if: matrix.os == 'macos-latest'  
-  run: |
-    # Create .app bundle structure
-    mkdir -p MediaDownloader.app/Contents/MacOS
-    mkdir -p MediaDownloader.app/Contents/Resources
+        if: matrix.os == 'macos-latest'
+        run: |
+          mkdir -p MediaDownloader.app/Contents/MacOS
+          mkdir -p MediaDownloader.app/Contents/Resources
 
-    # Copy published backend
-    cp -r publish/* MediaDownloader.app/Contents/MacOS/
+          cp -r publish/* MediaDownloader.app/Contents/MacOS/
+          cp Installers_Resources/info.plist MediaDownloader.app/Contents/
+          cp Installers_Resources/favicon.icns MediaDownloader.app/Contents/Resources/
 
-    # Copy Info.plist
-    cp Installers_Resources/info.plist MediaDownloader.app/Contents/
+          chmod +x MediaDownloader.app/Contents/MacOS/Downloader_Backend
+          chmod +x MediaDownloader.app/Contents/MacOS/tools/* || true
 
-    # Copy macOS icon
-    cp Installers_Resources/favicon.icns MediaDownloader.app/Contents/Resources/
+          mkdir -p Payload/Applications
+          cp -r MediaDownloader.app Payload/Applications/
 
-    # Permissions
-    chmod +x MediaDownloader.app/Contents/MacOS/Downloader_Backend
-    chmod +x MediaDownloader.app/Contents/MacOS/tools/* || true
+          mkdir -p Scripts
+          cp Installers_Resources/postinstall Scripts/
+          cp Installers_Resources/com.mediadownloader.backend.plist Scripts/
+          chmod +x Scripts/postinstall
 
-    # Prepare pkgbuild directories
-    mkdir -p Payload/Applications
-    cp -r MediaDownloader.app Payload/Applications/
-
-    mkdir -p Scripts
-    cp Installers_Resources/postinstall Scripts/
-    cp Installers_Resources/com.mediadownloader.backend.plist Scripts/
-
-    chmod +x Scripts/postinstall
-
-    # Build the .pkg
-    pkgbuild \
-      --root Payload/Applications \
-      --identifier com.mediadownloader.pkg \
-      --version 1.0 \
-      --scripts Scripts \
-      MediaDownloader.pkg
-  shell: bash
+          pkgbuild \
+            --root Payload/Applications \
+            --identifier com.mediadownloader.pkg \
+            --version 1.0 \
+            --scripts Scripts \
+            ${{ matrix.name }}.pkg
+        shell: bash
 
       # ==========================================================
       # Upload Artifact
