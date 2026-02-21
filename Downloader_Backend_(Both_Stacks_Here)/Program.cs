@@ -36,7 +36,7 @@ builder.Services.AddHostedService<FileCleanupService>();
 // --------------------
 // DATABASE
 // --------------------
-var databasePath = Path.Combine(AppContext.BaseDirectory, "Downloads.db");
+var databasePath = Utility.Create_Path(Making_Logs_Path: false);
 
 builder.Services.AddDbContextFactory<DownloadContext>(options =>
 {
@@ -114,7 +114,7 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Console()
     .WriteTo.File(
-        path: Path.Combine(Utility.Create_Log_Path(), "log-.txt"), // dynamic path for logs.
+        path: Path.Combine(Utility.Create_Path(Making_Logs_Path: true), "log-.txt"), // dynamic path for logs.
         rollingInterval: RollingInterval.Day,
         retainedFileCountLimit: 10, // keep last 10 logs
         fileSizeLimitBytes: 10_000_000, // 10 MB
@@ -128,23 +128,10 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 
-
-var toolsPath = Path.Combine(AppContext.BaseDirectory, "tools");
-Console.WriteLine("\n---- Path of tools folder: ", toolsPath);
-if (Directory.Exists(toolsPath) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-{
-    Console.WriteLine("---- Start to Get file from tools folder\n");
-    foreach (var file in Directory.GetFiles(toolsPath))
-    {
-        Console.WriteLine("---- Getting and fix RW permission to file: " + file);
-        Process.Start("chmod", $"+x {file}")?.WaitForExit();
-    }
-    Console.WriteLine("\n---- End of Get file from tools folder and fix RW Permission\n");
-}
+builder.WebHost.UseContentRoot(AppContext.BaseDirectory);
 
 
 var app = builder.Build();
-
 
 // --------------------
 // DB INIT
@@ -208,7 +195,7 @@ try
             Process.Start("xdg-open", url);
         }
     }
-    catch (Exception ex)
+    catch
     {
         // Fallback: Show message (Spectre.Console works cross-platform, even hidden)
         AnsiConsole.Markup("[red]Failed to open browser automatically.[/]\n");
