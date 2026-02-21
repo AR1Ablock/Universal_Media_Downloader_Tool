@@ -47,6 +47,48 @@ jobs:
             -o publish
         shell: bash
 
+
+        # ==========================================================
+      # Download yt-dlp & ffmpeg (Replace LFS pointers)
+      # ==========================================================
+      - name: Download Tools Binaries
+        run: |
+          mkdir -p publish/tools
+
+          echo "Running on ${{ matrix.os }}"
+
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            echo "Downloading Windows binaries..."
+
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -o publish/tools/yt-dlp.exe
+
+            curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -o ffmpeg.zip
+            unzip ffmpeg.zip
+            cp ffmpeg-*/bin/ffmpeg.exe publish/tools/ffmpeg.exe
+
+          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            echo "Downloading Linux binaries..."
+
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o publish/tools/yt-dlp
+            chmod +x publish/tools/yt-dlp
+
+            sudo apt install -y ffmpeg
+            cp $(which ffmpeg) publish/tools/ffmpeg
+            chmod +x publish/tools/ffmpeg
+
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            echo "Downloading macOS binaries..."
+
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos -o publish/tools/yt-dlp_mac
+            chmod +x publish/tools/yt-dlp_mac
+
+            brew install ffmpeg
+            cp $(which ffmpeg) publish/tools/ffmpeg_mac
+            chmod +x publish/tools/ffmpeg_mac
+
+          fi
+        shell: bash
+
       # ==========================================================
       # ==================== WINDOWS (Inno) ======================
       # ==========================================================
