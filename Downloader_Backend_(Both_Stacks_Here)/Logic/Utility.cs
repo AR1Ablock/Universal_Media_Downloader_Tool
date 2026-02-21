@@ -14,34 +14,53 @@ namespace Downloader_Backend.Logic
         private static readonly string[] sourceArray = ["cookies", "login", "429", "too many requests", "sabr", "unable to download webpage"];
 
 
-        public static string Create_Log_Path()
+        public static string Create_Path(bool Making_Logs_Path = true)
         {
-            string logDir;
+            string Dir_Path;
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                logDir = Path.Combine(
+                Dir_Path = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "MediaDownloader", "Logs");
+                    "MediaDownloader",
+                    Making_Logs_Path ? "Logs" : "Database");
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                logDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    "Library", "Logs", "MediaDownloader");
+                if (Making_Logs_Path)
+                {
+                    Dir_Path = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                        "Library", "Logs", "MediaDownloader");
+                }
+                else
+                {
+                    Dir_Path = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                        "Library", "Application Support", "MediaDownloader");
+                }
             }
             else // Linux/Unix
             {
-                logDir = Path.Combine(
+                Dir_Path = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    ".local", "share", "MediaDownloader", "Logs");
+                    ".local", "share", "MediaDownloader",
+                    Making_Logs_Path ? "Logs" : "Database");
             }
 
-            if (!Directory.Exists(logDir))
+            if (!Directory.Exists(Dir_Path))
             {
-                Directory.CreateDirectory(logDir);
+                Directory.CreateDirectory(Dir_Path);
             }
-            return logDir;
+
+            if (!Making_Logs_Path)
+            {
+                Dir_Path = Path.Combine(Dir_Path, "Downloads.db");
+            }
+
+            return Dir_Path;
         }
+
 
 
 
