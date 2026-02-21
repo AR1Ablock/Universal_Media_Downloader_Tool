@@ -29,7 +29,7 @@ namespace Downloader_Backend.Logic
         // Log cleanup settings. Max days to keep logs - Max folder size
         private readonly TimeSpan _logMaxAge = TimeSpan.FromDays(3);
         private const long MaxLogFolderSizeBytes = 50L * 1024 * 1024; // 50 MB
-        private readonly string LogDirectory = Path.Combine(AppContext.BaseDirectory, "Logs");
+        private readonly string LogDirectory = Utility.Create_Log_Path();
 
 
         // Reused collections to minimize GC pressure during high load
