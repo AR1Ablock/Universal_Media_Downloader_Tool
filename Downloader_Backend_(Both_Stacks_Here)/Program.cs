@@ -1,4 +1,3 @@
-
 using Serilog;
 using Downloader_Backend.Logic;
 using Downloader_Backend.Model;
@@ -161,8 +160,8 @@ using (var scope = app.Services.CreateScope())
     // start user service
     if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
     {   
-    utility.Run_Open_Media_Directory_Process("systemctl", "--user enable media_dl");
-    utility.Run_Open_Media_Directory_Process("systemctl", "--user start media_dl");
+    utility.Run_Open_Media_Directory_Process("systemctl", "--user enable mediadownloader");
+    utility.Run_Open_Media_Directory_Process("systemctl", "--user start mediadownloader");
     }
 }
 // --------------------
