@@ -132,10 +132,14 @@ jobs:
           cp -r publish/* package/opt/mediadownloader/
 
           mkdir -p package/lib/systemd/user
-          cp Installers_Resources/mediadownloader.service package/lib/systemd/user/
+          cp Installers_Resources/mediadownloader.service package/lib/systemd/system/
 
           mkdir -p package/usr/share/applications
           cp Installers_Resources/mediadownloader.desktop package/usr/share/applications/
+
+          mkdir -p package/usr/share/icons/hicolor/512x512/apps/
+          cp -r publish/wwwroot/favicon.png /usr/share/icons/hicolor/512x512/apps/mediadownloader.png
+          
 
           fpm -s dir -t deb -n mediadownloader -v 1.0 \
               --description "Universal Media Downloader" \
