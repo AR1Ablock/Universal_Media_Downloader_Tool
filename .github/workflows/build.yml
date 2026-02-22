@@ -41,9 +41,6 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # ==========================================================
-      # PUBLISH
-      # ==========================================================
       - name: Publish App
         run: |
           dotnet publish "Downloader_Backend_(Both_Stacks_Here)/Downloader_Backend.csproj" \
@@ -55,53 +52,35 @@ jobs:
             -o publish
         shell: bash
 
-      # ==========================================================
-      # Download yt-dlp & ffmpeg (Replace LFS pointers)
-      # ==========================================================
       - name: Download Tools Binaries
         run: |
           mkdir -p publish/tools
           echo "Running on ${{ matrix.os }}"
 
-          # ================= WINDOWS =================
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe \
-              -o publish/tools/yt-dlp.exe
-
-            curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip \
-              -o ffmpeg.zip
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -o publish/tools/yt-dlp.exe
+            curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -o ffmpeg.zip
             unzip -q ffmpeg.zip
             cp ffmpeg-*/bin/ffmpeg.exe publish/tools/ffmpeg.exe
 
-          # ================= LINUX =================
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
-              -o publish/tools/yt-dlp
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o publish/tools/yt-dlp
             chmod +x publish/tools/yt-dlp
-
-            curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
-              -o ffmpeg.tar.xz
+            curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
             tar -xf ffmpeg.tar.xz
             cp ffmpeg-*-amd64-static/ffmpeg publish/tools/ffmpeg
             chmod +x publish/tools/ffmpeg
 
-          # ================= MACOS =================
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos \
-              -o publish/tools/yt-dlp_mac
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos -o publish/tools/yt-dlp_mac
             chmod +x publish/tools/yt-dlp_mac
-
-            curl -L https://evermeet.cx/ffmpeg/ffmpeg-6.1.zip \
-              -o ffmpeg.zip
+            curl -L https://evermeet.cx/ffmpeg/ffmpeg-6.1.zip -o ffmpeg.zip
             unzip -q ffmpeg.zip
             mv ffmpeg publish/tools/ffmpeg_mac
             chmod +x publish/tools/ffmpeg_mac
           fi
         shell: bash
 
-      # ==========================================================
-      # ==================== WINDOWS =============================
-      # ==========================================================
       - name: Install Inno Setup
         if: matrix.os == 'windows-latest'
         run: choco install innosetup -y
@@ -109,16 +88,13 @@ jobs:
       - name: Build Windows Installer
         if: matrix.os == 'windows-latest'
         run: |
-          copy Installers_Resources\MediaDownloader.xml publish\
-          copy Installers_Resources\favicon.ico publish\
-          copy Installers_Resources\installer.iss installer.iss
+          copy "Installers_Resources\MediaDownloader.xml" publish\
+          copy "Installers_Resources\favicon.ico" publish\
+          copy "Installers_Resources\installer.iss" installer.iss
           iscc installer.iss
           move Output\MediaDownloaderInstaller.exe ${{ matrix.name }}.exe
         shell: cmd
 
-      # ==========================================================
-      # ==================== LINUX (.deb) ========================
-      # ==========================================================
       - name: Build Linux .deb
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -139,8 +115,13 @@ jobs:
           cp Installers_Resources/mediadownloader.desktop package/usr/share/applications/
 
           mkdir -p package/usr/share/icons/hicolor/512x512/apps/
-          cp publish/wwwroot/favicon.png /usr/share/icons/hicolor/512x512/apps/mediadownloader.png
-          
+          if [ -f publish/wwwroot/favicon.png ]; then
+            echo "Source file exists, copying..."
+            sudo cp publish/wwwroot/favicon.png /usr/share/icons/hicolor/512x512/apps/mediadownloader.png
+            echo "Target file details: $(ls -l /usr/share/icons/hicolor/512x512/apps/mediadownloader.png)"
+          else
+            echo "File not found: publish/wwwroot/favicon.png"
+          fi
 
           fpm -s dir -t deb -n mediadownloader -v 1.0 \
               --description "Universal Media Downloader" \
@@ -151,9 +132,6 @@ jobs:
           mv mediadownloader_1.0_amd64.deb ${{ matrix.name }}.deb
         shell: bash
 
-      # ==========================================================
-      # ==================== macOS (.app + PKG) ==================
-      # ==========================================================
       - name: Build macOS App + PKG
         if: matrix.os == 'macos-latest'
         run: |
@@ -183,9 +161,6 @@ jobs:
             ${{ matrix.name }}.pkg
         shell: bash
 
-      # ==========================================================
-      # Upload Artifact
-      # ==========================================================
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
