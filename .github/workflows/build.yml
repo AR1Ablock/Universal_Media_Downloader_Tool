@@ -110,6 +110,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           copy Installers_Resources\MediaDownloader.xml publish\
+          copy Installers_Resources\favicon.ico publish\
           copy Installers_Resources\installer.iss installer.iss
           iscc installer.iss
           move Output\MediaDownloaderInstaller.exe ${{ matrix.name }}.exe
