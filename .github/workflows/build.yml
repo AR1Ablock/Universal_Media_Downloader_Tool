@@ -126,14 +126,8 @@ jobs:
           tree package
           
           mkdir -p package/usr/share/icons/hicolor/512x512/apps/
-          if [ -f publish/wwwroot/favicon.png ]; then
-            echo "Source file exists, copying..."
-            sudo cp publish/wwwroot/favicon.png /usr/share/icons/hicolor/512x512/apps/mediadownloader.png
-            echo "Target file details: $(ls -l /usr/share/icons/hicolor/512x512/apps/mediadownloader.png)"
-          else
-            echo "File not found: publish/wwwroot/favicon.png"
-          fi
-
+          cp publish/wwwroot/favicon.png /usr/share/icons/hicolor/512x512/apps/mediadownloader.png
+            
           tree publish 
           tree package
 
