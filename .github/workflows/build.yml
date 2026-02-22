@@ -134,6 +134,9 @@ jobs:
             echo "File not found: publish/wwwroot/favicon.png"
           fi
 
+          tree publish 
+          tree package
+
           fpm -s dir -t deb -n mediadownloader -v 1.0 \
               --description "Universal Media Downloader" \
               --after-install Installers_Resources/postinst \
