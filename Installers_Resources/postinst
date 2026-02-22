@@ -1,5 +1,28 @@
 #!/bin/sh
 set -e
-systemctl daemon-reload
-systemctl --user enable mediadownloader
-systemctl --user start mediadownloader
+
+# Create system user if not exists
+if ! id -u mediadownloader >/dev/null 2>&1; then
+    useradd --system --no-create-home --shell /usr/sbin/nologin mediadownloader
+fi
+
+# Fix ownership
+chown -R mediadownloader:mediadownloader /opt/mediadownloader || true
+
+# Reload systemd safely
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload || true
+    systemctl enable mediadownloader.service || true
+    systemctl start mediadownloader.service || true
+fi
+
+# Update desktop + icon cache safely
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database /usr/share/applications || true
+fi
+
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache /usr/share/icons/hicolor || true
+fi
+
+exit 0
