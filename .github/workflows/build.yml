@@ -50,6 +50,9 @@ jobs:
             -p:PublishSingleFile=true \
             -p:EnableCompressionInSingleFile=true \
             -o publish
+            
+            ls -l publish/wwwroot
+            
         shell: bash
 
       - name: Download Tools Binaries
@@ -79,6 +82,9 @@ jobs:
             mv ffmpeg publish/tools/ffmpeg_mac
             chmod +x publish/tools/ffmpeg_mac
           fi
+          
+          ls -l publish/wwwroot
+          
         shell: bash
 
       - name: Install Inno Setup
@@ -114,6 +120,8 @@ jobs:
           mkdir -p package/usr/share/applications
           cp Installers_Resources/mediadownloader.desktop package/usr/share/applications/
 
+          ls -l publish/wwwroot
+          
           mkdir -p package/usr/share/icons/hicolor/512x512/apps/
           if [ -f publish/wwwroot/favicon.png ]; then
             echo "Source file exists, copying..."
@@ -130,6 +138,8 @@ jobs:
               .
 
           mv mediadownloader_1.0_amd64.deb ${{ matrix.name }}.deb
+          ls -l publish/wwwroot
+          
         shell: bash
 
       - name: Build macOS App + PKG
