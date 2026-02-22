@@ -1,3 +1,4 @@
+
 name: Build MediaDownloader
 
 on:
@@ -41,6 +42,9 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      # ==========================================================
+      # PUBLISH
+      # ==========================================================
       - name: Publish App
         run: |
           dotnet publish "Downloader_Backend_(Both_Stacks_Here)/Downloader_Backend.csproj" \
@@ -50,43 +54,55 @@ jobs:
             -p:PublishSingleFile=true \
             -p:EnableCompressionInSingleFile=true \
             -o publish
-            
-            ls -l publish/wwwroot
-            
         shell: bash
 
+      # ==========================================================
+      # Download yt-dlp & ffmpeg (Replace LFS pointers)
+      # ==========================================================
       - name: Download Tools Binaries
         run: |
           mkdir -p publish/tools
           echo "Running on ${{ matrix.os }}"
 
+          # ================= WINDOWS =================
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -o publish/tools/yt-dlp.exe
-            curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -o ffmpeg.zip
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe \
+              -o publish/tools/yt-dlp.exe
+
+            curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip \
+              -o ffmpeg.zip
             unzip -q ffmpeg.zip
             cp ffmpeg-*/bin/ffmpeg.exe publish/tools/ffmpeg.exe
 
+          # ================= LINUX =================
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o publish/tools/yt-dlp
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
+              -o publish/tools/yt-dlp
             chmod +x publish/tools/yt-dlp
-            curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
+
+            curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
+              -o ffmpeg.tar.xz
             tar -xf ffmpeg.tar.xz
             cp ffmpeg-*-amd64-static/ffmpeg publish/tools/ffmpeg
             chmod +x publish/tools/ffmpeg
 
+          # ================= MACOS =================
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos -o publish/tools/yt-dlp_mac
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos \
+              -o publish/tools/yt-dlp_mac
             chmod +x publish/tools/yt-dlp_mac
-            curl -L https://evermeet.cx/ffmpeg/ffmpeg-6.1.zip -o ffmpeg.zip
+
+            curl -L https://evermeet.cx/ffmpeg/ffmpeg-6.1.zip \
+              -o ffmpeg.zip
             unzip -q ffmpeg.zip
             mv ffmpeg publish/tools/ffmpeg_mac
             chmod +x publish/tools/ffmpeg_mac
           fi
-          
-          ls -l publish/wwwroot
-          
         shell: bash
 
+      # ==========================================================
+      # ==================== WINDOWS =============================
+      # ==========================================================
       - name: Install Inno Setup
         if: matrix.os == 'windows-latest'
         run: choco install innosetup -y
@@ -94,20 +110,22 @@ jobs:
       - name: Build Windows Installer
         if: matrix.os == 'windows-latest'
         run: |
-          copy "Installers_Resources\MediaDownloader.xml" publish\
-          copy "Installers_Resources\favicon.ico" publish\
-          copy "Installers_Resources\installer.iss" installer.iss
+          copy Installers_Resources\MediaDownloader.xml publish\
+          copy Installers_Resources\favicon.ico publish\
+          copy Installers_Resources\installer.iss installer.iss
           iscc installer.iss
           move Output\MediaDownloaderInstaller.exe ${{ matrix.name }}.exe
         shell: cmd
 
+      # ==========================================================
+      # ==================== LINUX (.deb) ========================
+      # ==========================================================
       - name: Build Linux .deb
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt update
           sudo apt install -y ruby ruby-dev
           sudo gem install fpm
-          sudo apt install tree
 
           chmod +x publish/Downloader_Backend
           chmod +x publish/tools/* || true
@@ -121,15 +139,8 @@ jobs:
           mkdir -p package/usr/share/applications
           cp Installers_Resources/mediadownloader.desktop package/usr/share/applications/
 
-          ls -l publish/
-          tree publish 
-          tree package
-          
           mkdir -p package/usr/share/icons/hicolor/512x512/apps/
           cp publish/wwwroot/favicon.png package/usr/share/icons/hicolor/512x512/apps/mediadownloader.png
-            
-          tree publish 
-          tree package
 
           fpm -s dir -t deb -n mediadownloader -v 1.0 \
               --description "Universal Media Downloader" \
@@ -138,10 +149,11 @@ jobs:
               .
 
           mv mediadownloader_1.0_amd64.deb ${{ matrix.name }}.deb
-          ls -l publish/wwwroot
-          
         shell: bash
 
+      # ==========================================================
+      # ==================== macOS (.app + PKG) ==================
+      # ==========================================================
       - name: Build macOS App + PKG
         if: matrix.os == 'macos-latest'
         run: |
@@ -171,6 +183,9 @@ jobs:
             ${{ matrix.name }}.pkg
         shell: bash
 
+      # ==========================================================
+      # Upload Artifact
+      # ==========================================================
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
