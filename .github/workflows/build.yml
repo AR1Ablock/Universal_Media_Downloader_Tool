@@ -109,8 +109,6 @@ jobs:
           sudo gem install fpm
           sudo apt install tree
 
-          tree .
-
           chmod +x publish/Downloader_Backend
           chmod +x publish/tools/* || true
 
@@ -124,7 +122,8 @@ jobs:
           cp Installers_Resources/mediadownloader.desktop package/usr/share/applications/
 
           ls -l publish/
-          tree .
+          tree publish 
+          tree package
           
           mkdir -p package/usr/share/icons/hicolor/512x512/apps/
           if [ -f publish/wwwroot/favicon.png ]; then
