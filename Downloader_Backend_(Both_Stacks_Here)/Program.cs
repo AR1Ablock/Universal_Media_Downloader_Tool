@@ -144,6 +144,7 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<DownloadContext>();
     var Port_Killer = scope.ServiceProvider.GetRequiredService<PortKiller>();
     var history = scope.ServiceProvider.GetRequiredService<IDownloadPersistence>();
+    var utility = scope.ServiceProvider.GetRequiredService<Utility>();
 
     try
     {
@@ -157,9 +158,13 @@ using (var scope = app.Services.CreateScope())
 
     await history.GetAllJobsAsync_From_DB();
     Port_Killer.KillProcessUsingPort(5050);
+    // start user service
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+    {   
+    utility.Run_Open_Media_Directory_Process("systemctl", "--user enable media_dl");
+    utility.Run_Open_Media_Directory_Process("systemctl", "--user start media_dl");
+    }
 }
-
-
 // --------------------
 // HTTP PIPELINE
 // --------------------
