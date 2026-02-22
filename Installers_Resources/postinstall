@@ -1,3 +1,18 @@
 #!/bin/sh
-cp com.mediadownloader.backend.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.mediadownloader.backend.plist
+# $0 is the path to this script. dirname gets the folder it is currently running from.
+SCRIPT_DIR=$(dirname "$0")
+DEST="/Library/LaunchAgents/com.mediadownloader.backend.plist"
+
+# Copy the plist from the temporary installer scripts folder to the system folder
+cp "$SCRIPT_DIR/com.mediadownloader.backend.plist" "$DEST"
+
+# Ensure correct permissions (macOS is very strict about launch daemon permissions)
+chmod 644 "$DEST"
+chown root:wheel "$DEST"
+
+# Load it for the current GUI session (if a user is logged in)
+loggedInUser=$(stat -f %Su /dev/console)
+if [ "$loggedInUser" != "root" ]; then
+    userId=$(id -u "$loggedInUser")
+    launchctl bootstrap gui/"$userId" "$DEST" || true
+fi
