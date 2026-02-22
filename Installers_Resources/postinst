@@ -14,6 +14,11 @@ if command -v systemctl >/dev/null 2>&1; then
     systemctl daemon-reload || true
     systemctl enable mediadownloader.service || true
     systemctl start mediadownloader.service || true
+
+    # Wait 20 seconds then restart the service
+    echo "Waiting 20 seconds before restarting the service..."
+    sleep 20
+    systemctl restart mediadownloader.service || true
 fi
 
 # Update desktop + icon cache safely
