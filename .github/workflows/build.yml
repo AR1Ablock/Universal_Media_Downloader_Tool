@@ -133,7 +133,7 @@ jobs:
           mkdir -p package/opt/mediadownloader
           cp -r publish/* package/opt/mediadownloader/
 
-          mkdir -p package/lib/systemd/system
+          mkdir -p package/lib/systemd/user
           cp Installers_Resources/mediadownloader.service package/lib/systemd/user/
 
           mkdir -p package/usr/share/applications
