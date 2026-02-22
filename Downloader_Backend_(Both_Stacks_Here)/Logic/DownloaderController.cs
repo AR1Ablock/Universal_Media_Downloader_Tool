@@ -1,5 +1,6 @@
 // DownloaderController.cs
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using Downloader_Backend.Model;
@@ -158,7 +159,8 @@ namespace Downloader_Backend.Logic
             }
 
             psi.ArgumentList.Add("-f"); psi.ArgumentList.Add(job.Format);
-            psi.ArgumentList.Add("--merge-output-format"); psi.ArgumentList.Add("mp4");
+            psi.ArgumentList.Add("--merge-output-format");
+            psi.ArgumentList.Add("mp4");
             psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(outputFile);
             psi.ArgumentList.Add("--progress-template");
             psi.ArgumentList.Add("prog:%(progress._percent_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s|%(progress._speed_str)s");
@@ -481,6 +483,53 @@ namespace Downloader_Backend.Logic
             }
 
             return NotFound();
+        }
+
+
+
+        [HttpPost("open-file")]
+        public IActionResult Open_Selected_File_Path(JobActionRequest req)
+        {
+            if (_tracker.Jobs.TryGetValue(req.JobId, out var oldJob))
+            {
+                var filePath = oldJob?.OutputPath;
+                if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
+                {
+                    _logger.LogWarning("File not found for job {JobId}", req.JobId);
+                    return NotFound(new { message = "File not found" });
+                }
+
+                _logger.LogInformation("Opening video with id: {VideoId} at {FilePath}", req.JobId, filePath);
+
+                try
+                {
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        // Explorer with file selected
+                        _utility.Run_Open_Media_Directory_Process("explorer.exe", $"/select,\"{filePath}\"");
+                    }
+                    else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    {
+                        // Finder with file revealed
+                        _utility.Run_Open_Media_Directory_Process("open", "-R \"" + filePath + "\"");
+                    }
+                    else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    {
+                        // Linux: open folder (cannot highlight file reliably)
+                        var dir = Path.GetDirectoryName(filePath);
+                        _utility.Run_Open_Media_Directory_Process("xdg-open", dir!);
+                    }
+
+                    return Ok(new { message = "Folder opened" });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to open folder for job {JobId}", req.JobId);
+                    return StatusCode(500, new { message = "Media not found, Failed to open folder" });
+                }
+            }
+
+            return NotFound(new { message = "Media not found" });
         }
     }
 }
