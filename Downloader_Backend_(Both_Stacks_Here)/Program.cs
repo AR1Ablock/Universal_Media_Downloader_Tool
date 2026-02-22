@@ -68,12 +68,14 @@ builder.WebHost.ConfigureKestrel(options =>
 /* builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAllOrigins",
-    builder => builder.WithOrigins("http://localhost:5173/")
+    builder => builder.WithOrigins("http://localhost:5173")
     .AllowAnyMethod()
     .AllowAnyHeader());
-});
+}); */
 
 
+
+/* 
 // Enable HTTPS with Let's Encrypt certificate
 // Note: This is a placeholder for your actual certificate path and password.
 
@@ -132,9 +134,6 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 
-builder.WebHost.UseContentRoot(AppContext.BaseDirectory);
-
-
 var app = builder.Build();
 
 // --------------------
@@ -164,11 +163,13 @@ using (var scope = app.Services.CreateScope())
 // --------------------
 // HTTP PIPELINE
 // --------------------
-//app.UseHttpsRedirection();
-app.MapGet("/", () => "Media Downloader Home!");
+// app.UseHttpsRedirection();
+// app.UseCors("AllowAllOrigins");
 app.UseStaticFiles();
 app.MapControllers();
+app.MapGet("/", () => "Media Downloader Home!");
 app.MapFallbackToFile("index.html");
+
 
 
 /* 
@@ -220,4 +221,3 @@ finally
 {
     Log.CloseAndFlush();
 }
-
