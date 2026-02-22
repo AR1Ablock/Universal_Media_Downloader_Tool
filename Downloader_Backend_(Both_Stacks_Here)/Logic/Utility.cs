@@ -61,9 +61,6 @@ namespace Downloader_Backend.Logic
             return Dir_Path;
         }
 
-
-
-
         public void Log_pids_tree(DownloadJob job)
         {
             foreach (var item in job.ProcessTreePids)
@@ -196,6 +193,36 @@ namespace Downloader_Backend.Logic
             }
             return (ytDlpPath, ffmpegPath);
         }
+
+
+        public void Run_Open_Media_Directory_Process(string fileName, string arguments)
+        {
+            Process? proc = null;
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = fileName, // for different os file managers.
+                    Arguments = arguments, // arguments based on OS type.
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                proc = Process.Start(psi);
+                // Wait briefly so the helper process can hand off to the OS
+                proc?.WaitForExit(2000); 
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to open media directory: {Error}", ex.Message);
+            }
+            finally
+            {
+                proc?.Dispose(); // release resources
+            }
+        }
+
+        
 
         public string SafeGetString(JsonElement e, string prop, string defaultValue = "unknown")
         {
@@ -387,7 +414,13 @@ namespace Downloader_Backend.Logic
                 bool isAudioOnly = vcodec == "none" && acodec != "none";
                 bool isVideoOnly = acodec == "none" && vcodec != "none";
 
-                string label = $"{(resolution.Contains("audio only") ? "" : $"{height}p • ")}{fs / 1024 / 1024}MB • {ext} • {Slow_Or_Fast} • {resolution}";
+                // Convert to MB
+                long sizeInMb = fs / 1024 / 1024;
+
+                // If yt-dlp reported 0, show "--MB"
+                string sizeLabel = sizeInMb == 0 ? "--MB" : $"{sizeInMb}MB";
+
+                string label = $"{(resolution.Contains("audio only") ? "" : $"{height}p • ")}{sizeLabel} • {ext} • {Slow_Or_Fast} • {resolution}";
                 //  | A:{acodec} | V:{vcodec}
 
                 return new Format
@@ -455,7 +488,7 @@ namespace Downloader_Backend.Logic
 
                 string size = tbr.HasValue && duration > 0
                                        ? $"{Math.Round(tbr.Value * duration / 8 / 1024, 1)}MB"
-                                       : "N/A";
+                                       : "--MB";
 
                 string label = $"{ext} • {resolution} • {Slow_Or_Fast} • {size}";
                 //| A:{(acodec == "none" ? "none" : acodec)} | V:{(vcodec == "none" ? "none" : vcodec)}
