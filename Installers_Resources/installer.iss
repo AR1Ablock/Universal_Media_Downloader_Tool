@@ -1,7 +1,8 @@
 [Setup]
 AppName=Media Downloader
-AppVersion=1.0
-DefaultDirName={pf}\MediaDownloader
+AppVersion=100.10
+ArchitecturesInstallIn64BitMode=x64
+DefaultDirName={autopf}\MediaDownloader
 DefaultGroupName=Media Downloader
 OutputBaseFilename=MediaDownloaderInstaller
 Compression=lzma
