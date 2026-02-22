@@ -6,7 +6,10 @@
   </Triggers>
   <Actions>
     <Exec>
-      <Command>C:\Program Files\MediaDownloader\Downloader_Backend.exe</Command>
+      <Command>%ProgramFiles%\MediaDownloader\Downloader_Backend.exe</Command>
+    </Exec>
+    <Exec>
+      <Command>%ProgramFiles(x86)%\MediaDownloader\Downloader_Backend.exe</Command>
     </Exec>
   </Actions>
 </Task>
