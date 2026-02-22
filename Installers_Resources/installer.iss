@@ -18,5 +18,5 @@ Name: "{commondesktop}\Media Downloader"; Filename: "{app}\Downloader_Backend.ex
 
 [Run]
 Filename: "schtasks"; \
-  Parameters: "/Create /TN MediaDownloader /XML {app}\MediaDownloader.xml /F"; \
+  Parameters: "/Create /TN MediaDownloader /XML ""{app}\MediaDownloader.xml"" /F"; \
   Flags: runhidden
