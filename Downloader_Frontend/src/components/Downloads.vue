@@ -10,12 +10,8 @@
           <button @click="copyUrl(job.id)" class="icon-button copy" title="Copy URL">
             <i class="fas fa-copy" /> Copy
           </button>
-          <button
-            @click="deleteUI(job.id)"
-            class="icon-button icon-delete-ui remove"
-            title="Remove from UI"
-            :disabled="jobCooling[job.id]"
-          >
+          <button @click="deleteUI(job.id)" class="icon-button icon-delete-ui remove" title="Remove from UI"
+            :disabled="jobCooling[job.id]">
             <i class="fas fa-times" />
           </button>
         </div>
@@ -28,77 +24,47 @@
               <button @click="copyUrl(job.id)" class="icon-button copy" title="Copy URL">
                 <i class="fas fa-copy" /> Copy
               </button>
-              <button
-                @click="deleteUI(job.id)"
-                class="icon-button icon-delete-ui remove"
-                title="Remove from UI"
-                :disabled="jobCooling[job.id]"
-              >
+              <button @click="deleteUI(job.id)" class="icon-button icon-delete-ui remove" title="Remove from UI"
+                :disabled="jobCooling[job.id]">
                 <i class="fas fa-times" />
               </button>
             </div>
           </div>
 
           <div class="progress-bar-container">
-            <div
-              class="progress-bar"
-              :style="{ width: (job.progress?.toFixed(2) ?? 0) + '%' }"
-            />
+            <div class="progress-bar" :style="{ width: (job.progress?.toFixed(2) ?? 0) + '%' }" />
           </div>
 
           <div class="details">
             <span>{{ job.downloaded }} MB / {{ job.total }} MB</span>
-            <span
-              >Speed: {{ job.speed
-              }}{{ job.speed !== "N/A" && job.speed !== "0" ? "/s" : "" }}</span
-            >
+            <span>Speed: {{ job.speed
+            }}{{ job.speed !== "N/A" && job.speed !== "0" ? "/s" : "" }}</span>
             <span>Progress: {{ job.progress?.toFixed(2) ?? 0 }}%</span>
             <span>Job: {{ job.status }}</span>
           </div>
 
           <div class="buttons">
-            <button
-              @click="pause(job.id)"
-              class="btn pause"
-              :disabled="jobCooling[job.id]"
-            >
+            <button @click="pause(job.id)" class="btn pause" :disabled="jobCooling[job.id]">
               <i class="fas fa-pause" /> Pause
             </button>
-            <button
-              @click="resume(job.id)"
-              class="btn resume"
-              :disabled="jobCooling[job.id]"
-            >
+            <button @click="resume(job.id)" class="btn resume" :disabled="jobCooling[job.id]">
               <i class="fas fa-play" /> Resume
             </button>
-            <button
-              @click="restart(job.id)"
-              class="btn restart"
-              :disabled="jobCooling[job.id]"
-            >
+            <button @click="restart(job.id)" class="btn restart" :disabled="jobCooling[job.id]">
               <i class="fas fa-redo" /> Restart
             </button>
-            <button
-              @click="newUrl(job.id)"
-              class="btn resume_broken"
-              :disabled="jobCooling[job.id]"
-            >
+            <button @click="newUrl(job.id)" class="btn resume_broken" :disabled="jobCooling[job.id]">
               <i class="fas fa-link" /> Fix URL
             </button>
-            <button
-              @click="deleteFile(job.id)"
-              class="btn delete icon-delete-file"
-              :disabled="jobCooling[job.id]"
-            >
+            <button @click="deleteFile(job.id)" class="btn delete icon-delete-file" :disabled="jobCooling[job.id]">
               <i class="fas fa-trash" /> Delete File
             </button>
-            <button
-              v-if="Is_Download_Enabled"
-              @click="downloadFile(job.id)"
-              class="btn download"
-              :disabled="job.status !== 'completed'"
-            >
+            <button v-if="Is_Download_Enabled" @click="downloadFile(job.id)" class="btn download"
+              :disabled="job.status !== 'completed'">
               <i class="fas fa-download"></i> Download
+            </button>
+            <button @click="Open_File_Directory(job.id)" class="btn download" :disabled="job.status !== 'completed'">
+              <i class="fas fa-folder-open"></i> Open
             </button>
           </div>
         </div>
@@ -145,6 +111,8 @@ async function updateProgress() {
     handleNetworkError(error, "updateProgress");
   }
 }
+
+
 
 async function downloadFile(jobId) {
   if (!Is_Download_Enabled) {
@@ -194,10 +162,33 @@ function postAction(path, payload) {
     handleNetworkError(error, `postAction(${path})`);
   }
 }
-const pause = (id) => postAction("pause", { jobId: id });
-const resume = (id) => postAction("resume", { jobId: id });
-const deleteUI = (id) => postAction("delete-ui", { jobId: id });
-const deleteFile = (id) => postAction("delete-file", { jobId: id });
+const pause = async (id) => await postAction("pause", { jobId: id });
+const resume = async (id) => await postAction("resume", { jobId: id });
+const deleteUI = async (id) => await postAction("delete-ui", { jobId: id });
+const deleteFile = async (id) => await postAction("delete-file", { jobId: id });
+
+
+
+let file_opening = false;
+
+async function Open_File_Directory(id) { 
+  if (file_opening) return; 
+  file_opening = true;
+  try {
+    const res = await postAction("open-file", { jobId: id });
+    const json = await res.json();
+
+    if (json.message && json.message.includes("not found")) {
+      alert(json.message);
+    }
+  } catch (err) {
+    console.error("Failed to open file directory", err);
+    alert("Error: could not open folder");
+  } finally {
+    file_opening = false;   // always reset, even on error
+  }
+}
+
 
 const restart = (id) => {
   try {
@@ -312,6 +303,7 @@ function watchForProgress(id) {
 * {
   box-sizing: border-box;
 }
+
 body {
   margin: 0;
   padding: 16px;
@@ -393,12 +385,15 @@ button {
   align-items: center;
   gap: 4px;
 }
+
 .icon-button:hover {
   color: #fff;
 }
+
 .icon-delete-ui {
   color: #f87171;
 }
+
 .icon-delete-file {
   color: #facc15;
 }
@@ -409,6 +404,7 @@ button {
   height: 0.8rem;
   overflow: hidden;
 }
+
 .progress-bar {
   background: linear-gradient(to right, #a855f7, #d946ef);
   height: 100%;
@@ -429,6 +425,7 @@ button {
   gap: 8px;
   margin-top: 6px;
 }
+
 .btn {
   flex: 1 1 100px;
   padding: 6px 8px;
@@ -443,9 +440,11 @@ button {
   gap: 6px;
   transition: background 0.2s;
 }
+
 .btn i {
   color: #c084fc;
 }
+
 .btn:hover {
   background: #3a3a55;
   color: #fff;
@@ -455,6 +454,7 @@ button {
 .desktop-only {
   display: flex;
 }
+
 .small-overlay {
   display: none;
 }
@@ -471,32 +471,39 @@ button {
     width: 90vw;
   }
 }
+
 @media (max-width: 600px) {
   .download-card {
     width: 90vw;
     flex-direction: column;
     align-items: stretch;
   }
+
   .desktop-only {
     display: none;
   }
+
   .small-overlay {
     display: flex;
     flex-direction: column-reverse;
     position: absolute;
     right: 12px;
   }
+
   .right-controls {
     /* ensure the internal gap applies */
     gap: 15px;
   }
+
   .details {
     flex-direction: column;
     gap: 4px;
   }
+
   .buttons {
     flex-direction: column;
   }
+
   .btn {
     flex: 1 1 auto;
   }
@@ -504,11 +511,16 @@ button {
 
 /* Disabled state for all your .btn buttons */
 .btn:disabled {
-  background-color: rgba(255, 255, 255, 0.1); /* subtle light overlay */
-  color: #777; /* medium-gray text */
-  cursor: not-allowed; /* show forbidden cursor */
-  opacity: 0.7; /* slightly faded */
-  transition: none; /* no hover transitions */
+  background-color: rgba(255, 255, 255, 0.1);
+  /* subtle light overlay */
+  color: #777;
+  /* medium-gray text */
+  cursor: not-allowed;
+  /* show forbidden cursor */
+  opacity: 0.7;
+  /* slightly faded */
+  transition: none;
+  /* no hover transitions */
 }
 
 /* Prevent hover styles from applying when disabled */
