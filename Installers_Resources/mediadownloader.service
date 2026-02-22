@@ -1,11 +1,15 @@
 [Unit]
-Description=Media Downloader Backend (User)
-After=default.target
+Description=Media Downloader Backend
+After=network.target
 
 [Service]
+Type=simple
 ExecStart=/opt/mediadownloader/Downloader_Backend
 WorkingDirectory=/opt/mediadownloader
 Restart=always
+RestartSec=3
+User=mediadownloader
+Group=mediadownloader
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
