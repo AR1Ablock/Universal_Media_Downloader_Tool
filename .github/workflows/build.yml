@@ -126,15 +126,12 @@ jobs:
           mkdir -p package/lib/systemd/user
           cp Installers_Resources/mediadownloader.service package/lib/systemd/user/
 
-          mkdir -p package/DEBIAN
-          cp Installers_Resources/postinst package/DEBIAN/
-          chmod 755 package/DEBIAN/postinst
-
           mkdir -p package/usr/share/applications
           cp Installers_Resources/mediadownloader.desktop package/usr/share/applications/
 
           fpm -s dir -t deb -n mediadownloader -v 1.0 \
               --description "Universal Media Downloader" \
+              --after-install Installers_Resources/postinst \
               -C package \
               .
 
