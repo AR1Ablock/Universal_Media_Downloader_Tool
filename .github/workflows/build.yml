@@ -126,7 +126,7 @@ jobs:
           tree package
           
           mkdir -p package/usr/share/icons/hicolor/512x512/apps/
-          cp publish/wwwroot/favicon.png /usr/share/icons/hicolor/512x512/apps/mediadownloader.png
+          cp publish/wwwroot/favicon.png package/usr/share/icons/hicolor/512x512/apps/mediadownloader.png
             
           tree publish 
           tree package
