@@ -5,8 +5,6 @@ using Downloader_Backend.Model;
 using Downloader_Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Runtime.InteropServices;
-using System.Diagnostics;
-using Spectre.Console;
 
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -63,6 +61,7 @@ builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenAnyIP(5050);
 });
+
 
 
 /* builder.Services.AddCors(options =>
@@ -139,12 +138,14 @@ var app = builder.Build();
 // --------------------
 // DB INIT
 // --------------------
+Utility utility;
+
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<DownloadContext>();
     var Port_Killer = scope.ServiceProvider.GetRequiredService<PortKiller>();
     var history = scope.ServiceProvider.GetRequiredService<IDownloadPersistence>();
-    var utility = scope.ServiceProvider.GetRequiredService<Utility>();
+    utility = scope.ServiceProvider.GetRequiredService<Utility>();
 
     try
     {
@@ -158,7 +159,18 @@ using (var scope = app.Services.CreateScope())
 
     await history.GetAllJobsAsync_From_DB();
     Port_Killer.EnsurePortAvailable(5050);
+
+    // Enabling linux services due to installer cant enable them in user mode.
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && utility.Run_Open_Media_Directory_Process("systemctl", "--user is-active mediadownloader") != "active")
+    {
+        utility.Run_Open_Media_Directory_Process("systemctl", "--user enable mediadownloader");
+        utility.Run_Open_Media_Directory_Process("systemctl", "--user start mediadownloader");
+    }
+    //
 }
+
+
+
 // --------------------
 // HTTP PIPELINE
 // --------------------
@@ -181,32 +193,14 @@ dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFil
 try
 {
     Log.Information("Application starting...");
+
     // Run server in background task
     var serverTask = app.RunAsync();
-    try
+    //
+    if (utility.StartedFromUser())
     {
         var url = "http://localhost:5050/index.html";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            Process.Start("open", url);
-        }
-        else  // Linux
-        {
-            Process.Start("xdg-open", url);
-        }
-    }
-    catch
-    {
-        // Fallback: Show message (Spectre.Console works cross-platform, even hidden)
-        AnsiConsole.Markup("[red]Failed to open browser automatically.[/]\n");
-        AnsiConsole.Markup("Please open your default browser and navigate to [blue]http://localhost:5050[/index.html].\n");
-        AnsiConsole.Markup("If no browser is installed, download one from [blue]https://www.google.com/chrome[/] or similar.\n");
-        AnsiConsole.Markup("Press any key to continue...");
-        Console.ReadKey();
+        utility.OpenBrowser(url);
     }
 
     // Wait for server to exit (e.g., on app close)
