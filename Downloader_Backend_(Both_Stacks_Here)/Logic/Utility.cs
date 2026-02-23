@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Downloader_Backend.Model;
+using Spectre.Console;
 
 namespace Downloader_Backend.Logic
 {
@@ -212,14 +213,15 @@ namespace Downloader_Backend.Logic
 
                 proc = Process.Start(psi);
 
-                string output = proc!.StandardOutput.ReadToEnd(); 
-                string error = proc.StandardError.ReadToEnd(); 
-                
-                proc.WaitForExit(2000); 
-                
-                if (!string.IsNullOrEmpty(error)) { 
-                _logger?.LogError("Error While Running some method Process: {Error}", error); 
-                } 
+                string output = proc!.StandardOutput.ReadToEnd().Trim();
+                string error = proc.StandardError.ReadToEnd().Trim();
+
+                proc.WaitForExit(2000);
+
+                if (!string.IsNullOrEmpty(error))
+                {
+                    _logger?.LogError("Error While Running some method Process: {Error}", error);
+                }
                 return output;
 
             }
@@ -234,7 +236,56 @@ namespace Downloader_Backend.Logic
             }
         }
 
-        
+
+        public bool StartedFromUser()
+        {
+            try
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    return Environment.UserInteractive;
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    return Environment.GetEnvironmentVariable("INVOCATION_ID") == null;
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    return Environment.GetEnvironmentVariable("LAUNCH_JOB_LABEL") == null;
+
+                return true; // fallback
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("error in run by tap or script {error}" , ex.Message);
+                return false;
+            }
+        }
+
+
+        public void OpenBrowser(string url)
+        {
+            try
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    Run_Open_Media_Directory_Process("cmd.exe", $"/c start {url}");
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    Run_Open_Media_Directory_Process("/bin/bash", $"-c \"open {url}\"");
+                }
+                else // Linux
+                {
+                    Run_Open_Media_Directory_Process("/bin/bash", $"-c \"xdg-open {url}\"");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to open browser");
+                AnsiConsole.Markup("[red]Failed to open browser automatically.[/]\n");
+                AnsiConsole.Markup($"Please open your default browser and navigate to [blue]{url}[/].\n");
+            }
+        }
+
+
 
         public string SafeGetString(JsonElement e, string prop, string defaultValue = "unknown")
         {
