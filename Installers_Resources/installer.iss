@@ -18,6 +18,8 @@ Name: "{group}\Media Downloader"; Filename: "{app}\Downloader_Backend.exe"; Icon
 Name: "{commondesktop}\Media Downloader"; Filename: "{app}\Downloader_Backend.exe"; IconFilename: "{app}\favicon.ico"
 
 [Run]
-Filename: "schtasks"; \
-  Parameters: "/Create /TN MediaDownloader /XML ""{app}\MediaDownloader.xml"" /F"; \
-  Flags: runhidden
+; Create the task
+Filename: "schtasks"; Parameters: "/Create /TN MediaDownloader /XML ""{app}\MediaDownloader.xml"" /F"; Flags: runhidden;
+
+; Start the task immediately
+Filename: "schtasks"; Parameters: "/Run /TN MediaDownloader"; Flags: runhidden
