@@ -195,7 +195,7 @@ namespace Downloader_Backend.Logic
         }
 
 
-        public void Run_Open_Media_Directory_Process(string fileName, string arguments)
+        public string Run_Open_Media_Directory_Process(string fileName, string arguments)
         {
             Process? proc = null;
             try
@@ -204,17 +204,29 @@ namespace Downloader_Backend.Logic
                 {
                     FileName = fileName, // for different os file managers.
                     Arguments = arguments, // arguments based on OS type.
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
 
                 proc = Process.Start(psi);
-                // Wait briefly so the helper process can hand off to the OS
-                proc?.WaitForExit(2000); 
+
+                string output = proc!.StandardOutput.ReadToEnd(); 
+                string error = proc.StandardError.ReadToEnd(); 
+                
+                proc.WaitForExit(2000); 
+                
+                if (!string.IsNullOrEmpty(error)) { 
+                _logger?.LogError("Error While Running some method Process: {Error}", error); 
+                } 
+                return output;
+
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to open media directory: {Error}", ex.Message);
+                return $"Exception: {ex.Message}";
             }
             finally
             {
