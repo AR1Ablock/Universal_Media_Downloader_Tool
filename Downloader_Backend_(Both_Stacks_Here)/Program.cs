@@ -195,6 +195,7 @@ try
             // OUR backend (service or previous instance) is already running
             utility.OpenBrowser($"http://localhost:{Port}/index.html");
             Log.Information("Our backend is already running → opened browser and exiting this instance.");
+            utility.Checking_And_Starting_Linux_Service();
             return; // exit cleanly — do not start another server
         }
 
@@ -208,12 +209,8 @@ try
         }
 
         // First-time setup: enable systemd user service (Linux only)
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && utility.Run_Open_Media_Directory_Process("systemctl", "--user is-active mediadownloader") != "active")
-        {
-            utility.Run_Open_Media_Directory_Process("systemctl", "--user enable --now mediadownloader");
-            Log.Information("Systemd user service enabled and started.");
-        }
-
+        utility.Checking_And_Starting_Linux_Service();
+        //
         utility.OpenBrowser($"http://localhost:{Port}/index.html");
         await app.RunAsync();
 }
