@@ -214,7 +214,7 @@ namespace Downloader_Backend.Logic
             }
         }
 
-        
+
 
         public string Run_Open_Media_Directory_Process(string fileName, string arguments)
         {
@@ -233,10 +233,11 @@ namespace Downloader_Backend.Logic
 
                 proc = Process.Start(psi);
 
+                proc?.WaitForExit(2000);
+
                 string output = proc!.StandardOutput.ReadToEnd().Trim();
                 string error = proc.StandardError.ReadToEnd().Trim();
 
-                proc.WaitForExit(2000);
 
                 if (!string.IsNullOrEmpty(error))
                 {
