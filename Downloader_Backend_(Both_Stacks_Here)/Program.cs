@@ -195,7 +195,6 @@ try
             // OUR backend (service or previous instance) is already running
             utility.OpenBrowser($"http://localhost:{Port}/index.html");
             Log.Information("Our backend is already running → opened browser and exiting this instance.");
-            utility.Checking_And_Starting_Linux_Service();
             return; // exit cleanly — do not start another server
         }
 
@@ -222,4 +221,5 @@ finally
 {
     Log.CloseAndFlush();
 }
+
 
