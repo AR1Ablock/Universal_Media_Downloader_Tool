@@ -188,8 +188,6 @@ const int Port = 5050;
 
 try
 {
-    if (utility.StartedFromUser())
-    {
         Log.Information("---- App Started by User ----");
 
         if (Port_Killer.Is_Our_Backend_Running(Port))
@@ -218,13 +216,6 @@ try
 
         utility.OpenBrowser($"http://localhost:{Port}/index.html");
         await app.RunAsync();
-    }
-    else
-    {
-        // Service / background mode
-        Log.Information("Application starting in service mode...");
-        await app.RunAsync();
-    }
 }
 catch (Exception ex)
 {
