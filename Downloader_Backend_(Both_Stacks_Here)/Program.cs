@@ -139,11 +139,12 @@ var app = builder.Build();
 // DB INIT
 // --------------------
 Utility utility;
+PortKiller Port_Killer;
 
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<DownloadContext>();
-    var Port_Killer = scope.ServiceProvider.GetRequiredService<PortKiller>();
+    Port_Killer = scope.ServiceProvider.GetRequiredService<PortKiller>();
     var history = scope.ServiceProvider.GetRequiredService<IDownloadPersistence>();
     utility = scope.ServiceProvider.GetRequiredService<Utility>();
 
@@ -158,14 +159,6 @@ using (var scope = app.Services.CreateScope())
     }
 
     await history.GetAllJobsAsync_From_DB();
-    Port_Killer.EnsurePortAvailable(5050);
-
-    // Enabling linux services due to installer cant enable them in user mode.
-    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && utility.Run_Open_Media_Directory_Process("systemctl", "--user is-active mediadownloader") != "active")
-    {
-        utility.Run_Open_Media_Directory_Process("systemctl", "--user enable mediadownloader");
-        utility.Run_Open_Media_Directory_Process("systemctl", "--user start mediadownloader");
-    }
     //
 }
 
@@ -187,24 +180,51 @@ app.MapFallbackToFile("index.html");
 dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true
  */
 
+
 // --------------------
 // START
 // --------------------
+const int Port = 5050;
+
 try
 {
-    Log.Information("Application starting...");
-
-    // Run server in background task
-    var serverTask = app.RunAsync();
-    //
     if (utility.StartedFromUser())
     {
-        var url = "http://localhost:5050/index.html";
-        utility.OpenBrowser(url);
-    }
+        Log.Information("---- App Started by User ----");
 
-    // Wait for server to exit (e.g., on app close)
-    await serverTask;
+        if (Port_Killer.Is_Our_Backend_Running(Port))
+        {
+            // OUR backend (service or previous instance) is already running
+            utility.OpenBrowser($"http://localhost:{Port}/index.html");
+            Log.Information("Our backend is already running → opened browser and exiting this instance.");
+            return; // exit cleanly — do not start another server
+        }
+
+        // Either port is free OR occupied by external process → make it ours
+        Log.Information("Port {Port} is free or used by external process. Preparing our backend...", Port);
+
+        if (!Port_Killer.EnsurePortAvailable(Port))
+        {
+            Log.Error("Could not free port {Port}. Exiting...", Port);
+            return;
+        }
+
+        // First-time setup: enable systemd user service (Linux only)
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && utility.Run_Open_Media_Directory_Process("systemctl", "--user is-active mediadownloader") != "active")
+        {
+            utility.Run_Open_Media_Directory_Process("systemctl", "--user enable --now mediadownloader");
+            Log.Information("Systemd user service enabled and started.");
+        }
+
+        utility.OpenBrowser($"http://localhost:{Port}/index.html");
+        await app.RunAsync();
+    }
+    else
+    {
+        // Service / background mode
+        Log.Information("Application starting in service mode...");
+        await app.RunAsync();
+    }
 }
 catch (Exception ex)
 {
