@@ -1,3 +1,4 @@
+
 using Serilog;
 using Downloader_Backend.Logic;
 using Downloader_Backend.Model;
@@ -156,13 +157,7 @@ using (var scope = app.Services.CreateScope())
     }
 
     await history.GetAllJobsAsync_From_DB();
-    Port_Killer.KillProcessUsingPort(5050);
-    // start user service
-    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-    {   
-    utility.Run_Open_Media_Directory_Process("systemctl", "--user enable mediadownloader");
-    utility.Run_Open_Media_Directory_Process("systemctl", "--user start mediadownloader");
-    }
+    Port_Killer.EnsurePortAvailable(5050);
 }
 // --------------------
 // HTTP PIPELINE
