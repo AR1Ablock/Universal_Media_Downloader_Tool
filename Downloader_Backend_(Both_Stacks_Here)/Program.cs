@@ -188,7 +188,7 @@ const int Port = 5050;
 
 try
 {
-        Log.Information("---- App Started by User ----");
+        Log.Information("---- App Started ----");
 
         if (Port_Killer.Is_Our_Backend_Running(Port))
         {
@@ -222,3 +222,4 @@ finally
 {
     Log.CloseAndFlush();
 }
+
