@@ -145,6 +145,71 @@ namespace Downloader_Backend.Logic
             return int.TryParse(lsofOutput.Trim(), out int pid2) && pid2 > 0 ? pid2 : -1;
         }
 
+
+        /// <summary>
+        /// True ONLY if OUR backend is reachable on localhost:5050.
+        /// Follows your exact logic: localhost-connect first → then PID + name check.
+        /// Handles "Downloade" Linux truncation, external processes, self-detection.
+        /// </summary>
+        public bool Is_Our_Backend_Running(int port = 5050)
+        {
+            try
+            {
+                // Step 1: Can localhost actually connect? (critical for Vue/browser)
+                using var client = new TcpClient();
+                var connectTask = client.ConnectAsync("127.0.0.1", port);
+
+                if (!connectTask.Wait(900)) // 900ms is reliable even on slow machines
+                {
+                    _logger.LogDebug("Port {Port} is NOT reachable from localhost → not our backend.", port);
+                    return false;
+                }
+
+                _logger.LogDebug("Port {Port} is reachable from localhost → checking owner...", port);
+
+                // Step 2: Something is listening on localhost → who owns it?
+                var pid = GetPidUsingPort(port);
+                if (pid <= 0)
+                {
+                    _logger.LogWarning("Port {Port} reachable but PID detection failed.", port);
+                    return false;
+                }
+
+                if (pid == Environment.ProcessId)
+                {
+                    _logger.LogInformation("Our current instance is using port {Port}.", port);
+                    return true;
+                }
+
+                // Step 3: Check process name (handles Linux 15-char truncation "Downloade")
+                using var process = Process.GetProcessById(pid);
+                string name = process.ProcessName.ToLowerInvariant().Trim();
+
+                _logger.LogDebug("Port {Port} owner PID {Pid} → ProcessName: {Name}", port, pid, name);
+
+                bool isOurs = name.Contains("downloade") ||        // matches your lsof output
+                              name.Contains("downloader") ||
+                              name.Contains("mediadownloader") ||
+                              name.Contains("media_downloader") ||
+                              name.Contains("downloaderbackend") ||
+                              name.Contains("downloader_backend");
+
+                if (isOurs)
+                    _logger.LogInformation("✅ Our backend is already running on localhost:{Port} (PID {Pid})", port, pid);
+                else
+                    _logger.LogWarning("⚠️ Foreign process using localhost:{Port} (PID {Pid}, Name: {Name})", port, pid, name);
+
+                return isOurs;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not fully check backend on port {Port}", port);
+                return false;
+            }
+        }
+
+
+
         private bool KillProcessGracefully(int pid)
         {
             try
