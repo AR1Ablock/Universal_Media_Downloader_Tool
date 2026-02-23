@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -241,21 +242,23 @@ namespace Downloader_Backend.Logic
         {
             try
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    return Environment.UserInteractive;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return Environment.UserInteractive;
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    return Environment.GetEnvironmentVariable("INVOCATION_ID") == null;
+                {
+                    // More reliable detection (covers Docker, WSL, tmux, etc.)
+                    return string.IsNullOrEmpty(Environment.GetEnvironmentVariable("INVOCATION_ID")) &&
+                    !File.Exists("/.dockerenv") &&
+                    !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("TERM"));
+                }
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                    return Environment.GetEnvironmentVariable("LAUNCH_JOB_LABEL") == null;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LAUNCH_JOB_LABEL"));
 
-                return true; // fallback
+                return true;
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError("error in run by tap or script {error}" , ex.Message);
-                return false;
+                return true; // safest fallback
             }
         }
 
@@ -284,7 +287,6 @@ namespace Downloader_Backend.Logic
                 AnsiConsole.Markup($"Please open your default browser and navigate to [blue]{url}[/].\n");
             }
         }
-
 
 
         public string SafeGetString(JsonElement e, string prop, string defaultValue = "unknown")
