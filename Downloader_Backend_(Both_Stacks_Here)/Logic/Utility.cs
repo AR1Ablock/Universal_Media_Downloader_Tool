@@ -197,6 +197,25 @@ namespace Downloader_Backend.Logic
         }
 
 
+        public void Checking_And_Starting_Linux_Service()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return;
+
+            var state = Run_Open_Media_Directory_Process("systemctl", "--user is-active mediadownloader").Trim().ToLower();
+
+            _logger.LogInformation("Systemd state: {State}", state);
+
+            if (state != "active" && state != "activating")
+            {
+                Run_Open_Media_Directory_Process("systemctl", "--user enable mediadownloader");
+                Run_Open_Media_Directory_Process("systemctl", "--user start mediadownloader");
+                _logger.LogInformation("Systemd user service enabled and started.");
+            }
+        }
+
+        
+
         public string Run_Open_Media_Directory_Process(string fileName, string arguments)
         {
             Process? proc = null;
