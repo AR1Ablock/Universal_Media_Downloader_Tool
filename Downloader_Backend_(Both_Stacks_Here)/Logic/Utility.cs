@@ -9,11 +9,12 @@ using Spectre.Console;
 
 namespace Downloader_Backend.Logic
 {
-    public partial class Utility(ILogger<Utility> logger, ProcessControl processControl)
+    public partial class Utility(ILogger<Utility> logger, ProcessControl processControl, PortKiller portKiller)
     {
 
         private readonly ProcessControl _processControl = processControl;
         private readonly ILogger<Utility> _logger = logger;
+        private readonly PortKiller _portKiller = portKiller;
         private static readonly string[] sourceArray = ["cookies", "login", "429", "too many requests", "sabr", "unable to download webpage"];
 
 
@@ -266,7 +267,7 @@ namespace Downloader_Backend.Logic
             var args = Environment.GetCommandLineArgs();
             foreach (var arg in args)
             {
-             _logger.LogInformation("args---> :{arg}",arg);
+                _logger.LogInformation("args---> :{arg}", arg);
             }
 
             // Desktop icon (highest priority)
@@ -287,6 +288,29 @@ namespace Downloader_Backend.Logic
                 return string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LAUNCH_JOB_LABEL"));
 
             return true; // safe fallback
+        }
+
+
+        public async Task WaitForBackendAsync(int port, int timeoutMs = 10000)
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeoutMs)
+            {
+                try
+                {
+                    if (_portKiller.Is_Our_Backend_Running(port))
+                        return; // success
+                }
+                catch (Exception ex)
+                {
+                    // Optional: log the exception for visibility
+                    _logger.LogWarning(ex, "Error while checking backend state in Application start by user, first time linux service start, waiting app fecth port, will retry...");
+                }
+
+                await Task.Delay(500);
+            }
+
+            throw new TimeoutException($"Backend did not start within {timeoutMs/1000} sec");
         }
 
 
