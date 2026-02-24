@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/mediadownloader/Downloader_Backend
+ExecStart=/opt/mediadownloader/Downloader_Backend --service
 WorkingDirectory=/opt/mediadownloader
 Restart=always
 RestartSec=3
