@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Downloader_Backend.Model;
+using Serilog;
 using Spectre.Console;
 
 namespace Downloader_Backend.Logic
@@ -208,8 +209,10 @@ namespace Downloader_Backend.Logic
 
             if (state != "active" && state != "activating")
             {
-                Run_Open_Media_Directory_Process("systemctl", "--user enable mediadownloader");
-                Run_Open_Media_Directory_Process("systemctl", "--user start mediadownloader");
+                Run_Open_Media_Directory_Process("systemctl", "--user daemon-reload");
+                Run_Open_Media_Directory_Process("systemctl", "--user enable --now mediadownloader");
+                Run_Open_Media_Directory_Process("systemctl", "--user daemon-reload");
+
                 _logger.LogInformation("Systemd user service enabled and started.");
             }
         }
@@ -241,7 +244,7 @@ namespace Downloader_Backend.Logic
 
                 if (!string.IsNullOrEmpty(error))
                 {
-                    _logger?.LogError("Error While Running some method Process: {Error}", error);
+                    _logger?.LogError("Global Process Runner STD err variable: {Error}", error);
                 }
                 return output;
 
@@ -258,28 +261,32 @@ namespace Downloader_Backend.Logic
         }
 
 
-        public bool StartedFromUser()
+        public bool IsDesktopLaunch()
         {
-            try
+            var args = Environment.GetCommandLineArgs();
+            foreach (var arg in args)
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return Environment.UserInteractive;
+             _logger.LogInformation("args---> :{arg}",arg);
+            }
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                {
-                    // More reliable detection (covers Docker, WSL, tmux, etc.)
-                    return string.IsNullOrEmpty(Environment.GetEnvironmentVariable("INVOCATION_ID")) &&
-                    !File.Exists("/.dockerenv") &&
-                    !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("TERM"));
-                }
-
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LAUNCH_JOB_LABEL"));
-
+            // Desktop icon (highest priority)
+            if (args.Any(a => a.Equals("--desktop", StringComparison.OrdinalIgnoreCase)))
                 return true;
-            }
-            catch
-            {
-                return true; // safest fallback
-            }
+
+            // Service mode
+            if (args.Any(a => a.Equals("--service", StringComparison.OrdinalIgnoreCase)) ||
+                !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("INVOCATION_ID")) ||
+                !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JOURNAL_STREAM")))
+                return false;
+
+            // Fallback for Windows/macOS
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return Environment.UserInteractive;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LAUNCH_JOB_LABEL"));
+
+            return true; // safe fallback
         }
 
 
