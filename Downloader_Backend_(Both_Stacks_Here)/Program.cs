@@ -215,9 +215,10 @@ try
         Log.Information("---> Our backend is not running → activating service (will start app for linux), browser and starting the app for windows and Mac_OS now...");
         utility.Checking_And_Starting_Linux_Service();
         //
-        utility.OpenBrowser($"http://localhost:{Port}/index.html");
-
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) await app.RunAsync();
+        //
+        await utility.WaitForBackendAsync(Port); // wait for max 10s for backend to run.
+        utility.OpenBrowser($"http://localhost:{Port}/index.html");
         return;
     }
     else
