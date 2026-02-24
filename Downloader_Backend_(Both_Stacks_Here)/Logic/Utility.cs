@@ -9,12 +9,11 @@ using Spectre.Console;
 
 namespace Downloader_Backend.Logic
 {
-    public partial class Utility(ILogger<Utility> logger, ProcessControl processControl, PortKiller portKiller)
+    public partial class Utility(ILogger<Utility> logger, ProcessControl processControl)
     {
 
         private readonly ProcessControl _processControl = processControl;
         private readonly ILogger<Utility> _logger = logger;
-        private readonly PortKiller _portKiller = portKiller;
         private static readonly string[] sourceArray = ["cookies", "login", "429", "too many requests", "sabr", "unable to download webpage"];
 
 
@@ -291,14 +290,14 @@ namespace Downloader_Backend.Logic
         }
 
 
-        public async Task WaitForBackendAsync(int port, int timeoutMs = 10000)
+        public async Task WaitForBackendAsync(int port, PortKiller portKiller, int timeoutMs = 10000)
         {
             var sw = Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds < timeoutMs)
             {
                 try
                 {
-                    if (_portKiller.Is_Our_Backend_Running(port))
+                    if (portKiller.Is_Our_Backend_Running(port))
                         return; // success
                 }
                 catch (Exception ex)
