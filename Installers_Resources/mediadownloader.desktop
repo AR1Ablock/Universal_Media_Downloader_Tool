@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Media Downloader
-Exec=/opt/mediadownloader/Downloader_Backend
+Exec=/opt/mediadownloader/Downloader_Backend --desktop
 Icon=mediadownloader
 Type=Application
 Categories=Internet;
