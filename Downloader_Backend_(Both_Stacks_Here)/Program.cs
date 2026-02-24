@@ -188,13 +188,17 @@ const int Port = 5050;
 
 try
 {
-        Log.Information("---- App Started ----");
+    if (utility.IsDesktopLaunch())
+    {
+        Log.Information("\n\n---- App Started by User ----");
 
         if (Port_Killer.Is_Our_Backend_Running(Port))
         {
             // OUR backend (service or previous instance) is already running
             utility.OpenBrowser($"http://localhost:{Port}/index.html");
-            Log.Information("Our backend is already running → opened browser and exiting this instance.");
+
+            Log.Information("---> Our backend is already running → opened browser and exiting this instance.");
+
             return; // exit cleanly — do not start another server
         }
 
@@ -208,10 +212,27 @@ try
         }
 
         // First-time setup: enable systemd user service (Linux only)
+        Log.Information("---> Our backend is not running → activating service (will start app for linux), browser and starting the app for windows and Mac_OS now...");
         utility.Checking_And_Starting_Linux_Service();
         //
         utility.OpenBrowser($"http://localhost:{Port}/index.html");
+
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) await app.RunAsync();
+        return;
+    }
+    else
+    {
+        // Pure service mode (Linux systemd only)
+        Log.Information("\n\nApplication starting in systemd service mode...");
+        if (Port_Killer.Is_Our_Backend_Running(Port)) return;
+        if (!Port_Killer.EnsurePortAvailable(Port))
+        {
+            Log.Error("Could not free port {Port} in service mode. Exiting...", Port);
+            return;
+        }
         await app.RunAsync();
+    }
+
 }
 catch (Exception ex)
 {
@@ -221,5 +242,3 @@ finally
 {
     Log.CloseAndFlush();
 }
-
-
