@@ -217,7 +217,7 @@ try
         //
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) await app.RunAsync();
         //
-        await utility.WaitForBackendAsync(Port); // wait for max 10s for backend to run.
+        await utility.WaitForBackendAsync(Port, Port_Killer); // wait for max 10s for backend to run.
         utility.OpenBrowser($"http://localhost:{Port}/index.html");
         return;
     }
