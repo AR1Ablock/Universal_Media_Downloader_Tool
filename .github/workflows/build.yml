@@ -13,6 +13,9 @@ on:
           - dev
           - staging
           - production
+          
+permissions:
+  contents: write   # REQUIRED for creating releases
 
 jobs:
   build:
@@ -190,3 +193,21 @@ jobs:
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}.${{ matrix.ext }}
+          
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
