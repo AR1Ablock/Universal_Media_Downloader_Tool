@@ -17,7 +17,7 @@ namespace Downloader_Backend.Model
     public class DownloadJob(string id, string url, string format)
     {
         [Key]
-        public string Id { get; } = id;
+        public string Id { get; set; } = id;
         public string Url { get; set; } = url;
         public string Format { get; set; } = format;
         public required string Key { get; set; } = "";
@@ -41,7 +41,7 @@ namespace Downloader_Backend.Model
 
         [NotMapped]
         public List<int> ProcessTreePids { get; set; } = [];
-        
+
         public string OutputPath { get; set; } = "";
 
         public DateTimeOffset CreatedAt { get; } = DateTimeOffset.UtcNow;
@@ -59,6 +59,65 @@ namespace Downloader_Backend.Model
     {
         public ConcurrentDictionary<string, DownloadJob> Jobs { get; } = new();
     }
+
+
+    public class GlobalCancellationService
+    {
+        // Storage for multiple token sources
+        private readonly ConcurrentDictionary<string, CancellationTokenSource> _sources = new();
+
+        // Generate a unique key (e.g., GUID string)
+        public string GenerateKey()
+        {
+            return Guid.NewGuid().ToString("N"); // 32-char hex string
+        }
+
+        // Create a new token source, add to storage, and return it
+        public CancellationTokenSource CreateTokenSource(string key)
+        {
+            var cts = new CancellationTokenSource();
+            _sources[key] = cts;
+            return cts;
+        }
+
+        // Remove a specific token source by key
+        public bool RemoveTokenSource(string key)
+        {
+            if (_sources.TryRemove(key, out var cts))
+            {
+                if (!cts.IsCancellationRequested)
+                {
+                    cts.Cancel();
+                }
+                cts.Dispose();
+                return true;
+            }
+            return false;
+        }
+
+        // Cancel and dispose all token sources in storage
+        public void CancelAndDisposeAll()
+        {
+            foreach (var kvp in _sources)
+            {
+                var cts = kvp.Value;
+                if (!cts.IsCancellationRequested)
+                {
+                    cts.Cancel();
+                }
+                cts.Dispose();
+            }
+            _sources.Clear();
+        }
+
+        // ❗ New method: remove from storage only (no cancel/dispose)
+        public bool DetachTokenSource(string key)
+        {
+            return _sources.TryRemove(key, out _);
+        }
+
+    }
+
 
     public class Format
     {
