@@ -274,13 +274,13 @@ namespace Downloader_Backend.Logic
                                 _processControl.KillProcessTree(job.ProcessTreePids);
                                 await DownloadAsync(job, linkedToken, resume, restart, tryCookies: true, false, Token_Key); // Retry with cookies
                             }
-                            else if (hasImpersonateError && !tryImpersonate)
+                            if (hasImpersonateError && !tryImpersonate)
                             {
                                 _logger.LogInformation("Downalod retrying with impersonate");
                                 _processControl.KillProcessTree(job.ProcessTreePids);
                                 await DownloadAsync(job, linkedToken, resume, restart, false, tryImpersonate: true, Token_Key); // Retry with cookies
                             }
-                            else
+                            if (hasImpersonateError && hasCookieError)
                             {
                                 _logger.LogInformation("Downalod retrying with impersonate and cookies");
                                 _processControl.KillProcessTree(job.ProcessTreePids);
