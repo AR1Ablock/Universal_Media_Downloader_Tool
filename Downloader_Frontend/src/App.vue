@@ -2,30 +2,16 @@
   <header>
     <h1>🚀 Media Downloader</h1>
     <!-- Desktop Sign Out Button -->
-    <button
-      v-if="userKey"
-      @click="signOut"
-      class="signout-btn desktop-signout"
-      title="Sign Out"
-    >
+    <button v-if="userKey" @click="signOut" class="signout-btn desktop-signout" title="Sign Out">
       Sign Out
     </button>
     <!-- Mobile Menu Toggle -->
-    <button
-      v-if="userKey"
-      @click="toggleMobileMenu"
-      class="menu-toggle mobile-only"
-      title="Menu"
-    >
+    <button v-if="userKey" @click="toggleMobileMenu" class="menu-toggle mobile-only" title="Menu">
       ≡
     </button>
   </header>
   <!-- Mobile Right Sidebar Panel -->
-  <div
-    v-if="userKey && mobileMenuOpen"
-    class="mobile-panel-overlay"
-    @click="toggleMobileMenu"
-  ></div>
+  <div v-if="userKey && mobileMenuOpen" class="mobile-panel-overlay" @click="toggleMobileMenu"></div>
   <div v-if="userKey && mobileMenuOpen" class="mobile-panel">
     <button class="close-panel-btn" @click="toggleMobileMenu">✕</button>
     <button @click="signOut" class="signout-btn mobile-signout">Sign Out</button>
@@ -38,47 +24,19 @@
           <p class="Video_Title" :style="{ display: Title ? 'block' : 'none' }">
             {{ Title }}
           </p>
-          <img
-            v-show="thumbnailLink"
-            class="thumbnail"
-            :src="thumbnailLink"
-            alt="Thumbnail"
-          />
+          <img v-show="thumbnailLink" class="thumbnail" :src="thumbnailLink" alt="Thumbnail" />
           <div class="rows">
             <div class="row">
-              <input
-                v-model="url"
-                @keydown.enter.prevent="getFormats"
-                @paste="onPaste"
-                type="text"
-                placeholder="Paste video URL..."
-                autofocus
-                required
-                :class="{ edge_formInput: Is_Browser_Edge }"
-              />
-              <button
-                :disabled="loadingFormats || loadingDownload"
-                @click="getFormats"
-                class="btn"
-                :class="[
-                  { readjust_btn: loadingFormats },
-                  { 'error-btn': Is_Format_Error },
-                ]"
-              >
+              <input v-model="url" @keydown.enter.prevent="getFormats" @paste="onPaste" type="text"
+                placeholder="Paste video URL..." autofocus required :class="{ edge_formInput: Is_Browser_Edge }" />
+              <button :disabled="loadingFormats || loadingDownload" @click="getFormats" class="btn" :class="[
+                { readjust_btn: loadingFormats },
+                { 'error-btn': Is_Format_Error },
+              ]">
                 <div v-if="!loadingFormats">
                   <!-- Icon -->
-                  <svg
-                    width="64"
-                    height="32"
-                    viewBox="0 0 32 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    stroke="white"
-                    stroke-width="4"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    class="arrow-icon"
-                  >
+                  <svg width="64" height="32" viewBox="0 0 32 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                    stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="arrow-icon">
                     <path d="M3 12h24M21 6l8 6-8 6" />
                   </svg>
                 </div>
@@ -102,31 +60,14 @@
               </select>
             </div>
             <div class="row">
-              <button
-                id="downloadBtn"
-                class="btn"
-                :class="[
-                  { readjust_downloadBtn: loadingDownload },
-                  { 'error-btn': Is_Downlaod_Error },
-                ]"
-                v-show="formats.length"
-                :disabled="loadingDownload"
-                @click="startDownload"
-              >
+              <button id="downloadBtn" class="btn" :class="[
+                { readjust_downloadBtn: loadingDownload },
+                { 'error-btn': Is_Downlaod_Error },
+              ]" v-show="formats.length" :disabled="loadingDownload" @click="startDownload">
                 <div v-if="!loadingDownload">
                   <!-- Download Icon -->
-                  <svg
-                    width="32"
-                    height="48"
-                    viewBox="0 0 24 32"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    stroke="white"
-                    stroke-width="4"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    class="arrow-icon"
-                  >
+                  <svg width="32" height="48" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg"
+                    stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="arrow-icon">
                     <path d="M12 3v24M6 21l6 8 6-8" />
                   </svg>
                 </div>
@@ -173,7 +114,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, reactive, onMounted, onBeforeUnmount, watch, onUnmounted } from "vue";
 import Download from "./components/Downloads.vue";
 import Login from "./components/Login.vue";
 
@@ -212,20 +153,6 @@ function toggleMobileMenu() {
   mobileMenuOpen.value = !mobileMenuOpen.value;
 }
 
-onMounted(() => {
-  // auto-show when app loads
-  setTimeout(() => {
-    visible.value = true;
-  }, 1000);
-});
-
-onMounted(() => {
-  userKey.value = localStorage.getItem("MediaDownloaderUserKey");
-
-  if (navigator.userAgentData?.brands?.some((b) => b.brand === "Microsoft Edge")) {
-    Is_Browser_Edge.value = true;
-  }
-});
 
 function onLoggedIn(key) {
   userKey.value = key;
@@ -246,6 +173,16 @@ async function getFormats() {
     console.log("Already loading formats, please wait.");
     return;
   }
+
+  if (isOffline.value) {
+    Is_Format_Error.value = true;
+    setTimeout(() => {
+      Is_Format_Error.value = false;
+      alert("Network is offline, Cant get media info.");
+    }, 600);
+    return;
+  }
+
   if (url.value.trim() === "" || !/^https?:\/\/.+\..+/.test(url.value.trim())) {
     Is_Format_Error.value = true;
     setTimeout(() => {
@@ -328,6 +265,17 @@ async function startDownload() {
     console.log("Download already in progress, please wait.");
     return;
   }
+
+  if (isOffline.value) {
+    Is_Downlaod_Error.value = true;
+    setTimeout(() => {
+      Is_Downlaod_Error.value = false;
+      alert("Network is offline, Cant Download media.");
+    }, 600);
+    return;
+  }
+
+
   if (url.value.trim() === "" || !/^https?:\/\/.+\..+/.test(url.value.trim())) {
     Is_Downlaod_Error.value = true;
     setTimeout(() => {
@@ -393,11 +341,23 @@ let lastNetworkErrorTime = 0;
 const NETWORK_ERROR_PAUSE_MS = 1000; // 30 seconds
 
 function handleNetworkError(error, context = "action", method) {
-  const isNetworkError = error instanceof TypeError && error.message.includes("fetch");
-  const message =
-    isNetworkError || error.message.includes("Failed to fetch")
-      ? "🚨 Server unreachable. Try again later."
-      : error.message || "Unknown error occurred.";
+  let message = '';
+
+  if (!isOffline.value) {
+    const Unable_To_Downloader = error.message.includes('Unable to download webpage');
+    const Coeection_Timeout = error.message.includes('Retrying');
+    const isNetworkError = error.message.includes("fetch");
+    const UnSupported_URL = error.message.includes("Unsupported URL");
+    const Permanent_Error = error.message.includes("MEDIA_PERMANENT_ERROR");
+    message = isNetworkError ? "🚨 Server unreachable. Try again later." :
+      UnSupported_URL ? 'URL is not supported by this app.' :
+        Permanent_Error ? 'This media is private, unavailable, or age / geo restricted.' :
+          Unable_To_Downloader ? 'Unable to download the media' :
+            Coeection_Timeout ? 'Please Check Your Internet, Connection Timeout' : error.message || "Unknown error occurred.";
+  }
+  else {
+    message = 'Network Not Available Disconnected'
+  }
 
   const now = Date.now();
   if (!lastNetworkErrorTime || now - lastNetworkErrorTime > NETWORK_ERROR_PAUSE_MS) {
@@ -410,6 +370,79 @@ function handleNetworkError(error, context = "action", method) {
   }
   console.error(`Error during ${context}:`, error.message);
 }
+
+// Reactive flag for network status
+const isOffline = ref(false);
+
+
+async function pauseAllJobs() {
+  try {
+    const response = await fetch(`${ServerUrl}/Pause_All_Tasks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}`)
+    }
+
+    const data = await response?.json()
+    console.log('pause all job result: ' + data.jobs);
+  } catch (err) {
+    console.log('error in network off pause all method: ' + err);
+  }
+}
+
+
+// Method to update network status
+function updateNetworkStatus() {
+  isOffline.value = !navigator.onLine
+  if (isOffline.value) {
+    pauseAllJobs();
+  }
+}
+
+function esc_close_event(e) {
+  if (e.key === "Escape") {
+    visible.value = false;
+    mobileMenuOpen.value = false;
+  }
+}
+
+
+// Lifecycle hooks to attach/remove event listeners
+onMounted(() => {
+
+  // auto-show when app loads
+  setTimeout(() => {
+    visible.value = true;
+  }, 1000);
+
+  window.addEventListener("keydown", esc_close_event);
+
+
+  userKey.value = localStorage.getItem("MediaDownloaderUserKey");
+
+  if (navigator.userAgentData?.brands?.some((b) => b.brand === "Microsoft Edge")) {
+    Is_Browser_Edge.value = true;
+  }
+  // Initial check
+  updateNetworkStatus()
+
+  // Listen for browser online/offline events
+  window.addEventListener('online', updateNetworkStatus)
+  window.addEventListener('offline', updateNetworkStatus)
+});
+
+
+onUnmounted(() => {
+  window.removeEventListener('online', updateNetworkStatus)
+  window.removeEventListener('offline', updateNetworkStatus)
+  window.removeEventListener("keydown", esc_close_event);
+});
+
 
 function signOut() {
   mobileMenuOpen.value = false;
