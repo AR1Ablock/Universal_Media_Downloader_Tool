@@ -63,7 +63,7 @@
               :disabled="job.status !== 'completed'">
               <i class="fas fa-download"></i> Download
             </button>
-            <button @click="Open_File_Directory(job.id)" class="btn download" :disabled="job.status !== 'completed'">
+            <button @click="Open_File_Directory(job.id)" class="btn download" :disabled="job.status !== 'completed' && job.progress !== 100">
               <i class="fas fa-folder-open"></i> Open
             </button>
           </div>
