@@ -22,6 +22,7 @@ builder.Services.AddControllers();
 // SINGLETON - Shared state across all requests
 builder.Services.AddSingleton<DownloadTracker>();
 builder.Services.AddSingleton<PortKiller>();
+builder.Services.AddSingleton<GlobalCancellationService>();
 
 // SCOPED - New instance per request
 builder.Services.AddScoped<IDownloadPersistence, DownloadPersistence>();
@@ -243,3 +244,4 @@ finally
 {
     Log.CloseAndFlush();
 }
+
