@@ -1,5 +1,5 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -14,9 +14,7 @@ namespace Downloader_Backend.Logic
 
         private readonly ProcessControl _processControl = processControl;
         private readonly ILogger<Utility> _logger = logger;
-        private static readonly string[] sourceArray = ["cookies", "login", "429", "too many requests", "sabr", "unable to download webpage"];
-
-
+        
         public static string Create_Path(bool Making_Logs_Path = true)
         {
             string Dir_Path;
@@ -309,7 +307,7 @@ namespace Downloader_Backend.Logic
                 await Task.Delay(500);
             }
 
-            throw new TimeoutException($"Backend did not start within {timeoutMs/1000} sec");
+            throw new TimeoutException($"Backend did not start within {timeoutMs / 1000} sec");
         }
 
 
@@ -625,39 +623,135 @@ namespace Downloader_Backend.Logic
         }
 
 
-        public async Task<(bool success, string stdout, string stderr, bool loginRequired)> TryRunYtDlpAsync(
-                    string[] args,
-                    CancellationToken cancellationToken,
-                    bool tryWithCookies = false)
+
+        public readonly string[] CookieTriggers =
+        [
+    "cookies", "login", "429", "too many requests", "rate limit",
+    "sabr", "sign in", "log in", "authentication required"
+        ];
+
+        public readonly string[] ImpersonateTriggers =
+        [
+    "Cloudflare anti-bot challenge",
+    "Got HTTP Error 403 caused by Cloudflare",
+    "generic:impersonate",
+    "anti-bot challenge",
+    "attention required!",
+    "checking your browser",
+    "just a moment",
+    "cf-ray",
+    "Ray ID"
+        ];
+
+
+        public readonly string[] PermanentErrorTriggers =
+        [
+    "video unavailable",
+    "this video is unavailable",
+    "private video",
+    "private playlist",
+    "this video is private",
+    "sign in to view",
+    "login required to view",
+    "copyright",
+    "copyrighted content",
+    "removed by the uploader",
+    "geo restricted",
+    "geoblocked",
+    "not available in your country",
+    "not available in your region",
+    "this content is not available",
+    "age restricted",
+    "age-restricted",
+    "age gate"
+        ];
+
+
+        public enum YtDlpStrategy
         {
-            Process? proc = null;
+            Normal,
+            CookiesOnly,
+            ImpersonateOnly,
+            CookiesAndImpersonate
+        }
 
-            // Local helper – fastest possible kill, Windows = instant, Linux = only when needed
-            void SafeKillProcessTree(Process? process)
+
+        public async Task<(bool success, string stdout, string stderr, bool loginRequired)> TryRunYtDlpAsync(string[] args, CancellationToken cancellationToken)
+        {
+            bool triedCookies = false;
+            bool triedImpersonate = false;
+            bool loginRequired = false;
+            string lastError = string.Empty;
+
+            // === Step 1: Normal attempt ===
+            var result = await ExecuteWithStrategyAsync(args, YtDlpStrategy.Normal, cancellationToken);
+            lastError = result.stderr;
+
+            if (result.success)
+                return (true, result.stdout, result.stderr, false);
+
+            var errLower = lastError.ToLowerInvariant();
+
+            // Permanent error → throw immediately (your controller will catch it)
+            if (PermanentErrorTriggers.Any(t => errLower.Contains(t, StringComparison.OrdinalIgnoreCase)))
             {
-                if (process == null || process.HasExited) return;
+                throw new InvalidOperationException("MEDIA_PERMANENT_ERROR: This media is private, unavailable, or age / geo restricted.");
+            }
 
-                try
+            // Classify this error
+            loginRequired = CookieTriggers.Any(t => errLower.Contains(t, StringComparison.OrdinalIgnoreCase));
+            bool isCloudflare = ImpersonateTriggers.Any(t => errLower.Contains(t, StringComparison.OrdinalIgnoreCase));
+
+            // === Step 2: Handle Login Error (early exit if cookies also fail) ===
+            if (loginRequired)
+            {
+                if (!triedCookies)
                 {
-                    if (OperatingSystem.IsWindows())
-                    {
-                        // Built-in tree kill on Windows – extremely fast, no WMI query needed
-                        process.Kill(entireProcessTree: true);
-                    }
-                    else
-                    {
-                        // Only Linux/macOS fallback – still parallelized in your existing KillProcessTree
-                        var tree = _processControl.GetProcessTree(process.Id);
-                        _processControl.KillProcessTree(tree);
-                    }
+                    triedCookies = true;
+                    result = await ExecuteWithStrategyAsync(args, YtDlpStrategy.CookiesOnly, cancellationToken);
+                    lastError = result.stderr;
+                    errLower = lastError.ToLowerInvariant();
+
+                    if (result.success)
+                        return (true, result.stdout, result.stderr, true);
+
+                    loginRequired = CookieTriggers.Any(t => errLower.Contains(t, StringComparison.OrdinalIgnoreCase));
                 }
-                catch (Exception ex)
+
+                // If cookies also failed → this is truly login required, stop here
+                if (loginRequired)
+                    return (false, "", lastError, true);
+            }
+
+            // === Step 3: Handle Cloudflare / Impersonate ===
+            if (isCloudflare || !triedImpersonate)
+            {
+                if (!triedImpersonate)
                 {
-                    // Best-effort – we don't want a failed kill to crash the method
-                    _logger.LogWarning(ex, "Failed to terminate yt-dlp process tree (PID {Pid})", process?.Id);
+                    triedImpersonate = true;
+                    result = await ExecuteWithStrategyAsync(args, YtDlpStrategy.ImpersonateOnly, cancellationToken);
+                    lastError = result.stderr;
+
+                    if (result.success)
+                        return (true, result.stdout, result.stderr, loginRequired);
+                }
+
+                // Final powerful attempt: both together (most sites that need both)
+                if (!triedCookies)
+                {
+                    triedCookies = true;
+                    result = await ExecuteWithStrategyAsync(args, YtDlpStrategy.CookiesAndImpersonate, cancellationToken);
+                    lastError = result.stderr;
                 }
             }
 
+            // === Final fallback ===
+            return (false, "", lastError, loginRequired);
+        }
+
+        private async Task<(bool success, string stdout, string stderr)> ExecuteWithStrategyAsync(string[] baseArgs, YtDlpStrategy strategy, CancellationToken ct)
+        {
+            Process? proc = null;
             try
             {
                 var (ytDlpPath, _) = Local_Executables_Path();
@@ -671,65 +765,78 @@ namespace Downloader_Backend.Logic
                     WindowStyle = ProcessWindowStyle.Hidden
                 };
 
-                foreach (var a in args)
-                    psi.ArgumentList.Add(a);
+                foreach (var arg in baseArgs)
+                    psi.ArgumentList.Add(arg);
 
-                if (tryWithCookies)
+                // Apply strategy
+                switch (strategy)
                 {
-                    psi.ArgumentList.Add("--cookies-from-browser");
-                    var browser = GetYtDlpCompatibleBrowser() ?? "chrome";
-                    psi.ArgumentList.Add(browser);
+                    case YtDlpStrategy.CookiesOnly:
+                    case YtDlpStrategy.CookiesAndImpersonate:
+                        psi.ArgumentList.Add("--cookies-from-browser");
+                        psi.ArgumentList.Add(GetYtDlpCompatibleBrowser() ?? "chrome");
+                        break;
+                }
+
+                switch (strategy)
+                {
+                    case YtDlpStrategy.ImpersonateOnly:
+                    case YtDlpStrategy.CookiesAndImpersonate:
+                        psi.ArgumentList.Add("--extractor-args");
+                        psi.ArgumentList.Add("generic:impersonate");
+                        break;
                 }
 
                 proc = Process.Start(psi)
-                    ?? throw new InvalidOperationException("Failed to start yt-dlp executable.");
+                    ?? throw new InvalidOperationException("Failed to start yt-dlp");
 
-                // Kick off reads immediately – they complete when the process exits
-                var stdoutTask = proc.StandardOutput.ReadToEndAsync(cancellationToken);
-                var stderrTask = proc.StandardError.ReadToEndAsync(cancellationToken);
+                var stdoutTask = proc.StandardOutput.ReadToEndAsync(ct);
+                var stderrTask = proc.StandardError.ReadToEndAsync(ct);
 
-                // Wait for process exit (this is the only place cancellation can interrupt the actual work)
-                await proc.WaitForExitAsync(cancellationToken);
+                await proc.WaitForExitAsync(ct);
 
-                // Process has exited normally → reads are guaranteed complete or nearly complete
-                var output = await stdoutTask;
-                var error = await stderrTask;
+                var stdout = await stdoutTask;
+                var stderr = await stderrTask;
 
-                var success = proc.ExitCode == 0;
+                SafeKillProcessTree(proc);   // your existing helper
+                if (proc != null && !proc.HasExited) proc?.Dispose();
 
-                // Faster contains checks – no ToLowerInvariant() allocation on potentially large strings
-                var loginRequired = sourceArray.Any(term => error.Contains(term, StringComparison.OrdinalIgnoreCase));
-
-                // Retry with cookies only once – recursive is fine (max depth = 2)
-                if (!success && loginRequired && !tryWithCookies)
-                {
-                    // First attempt ended → clean up before retrying
-                    SafeKillProcessTree(proc); // usually not needed (already exited), but safe
-                    return await TryRunYtDlpAsync(args, cancellationToken, tryWithCookies: true);
-                }
-
-                return (success, output, error, loginRequired);
-            }
-            catch (OperationCanceledException)
-            {
-                _logger.LogInformation("yt-dlp operation cancelled by client (PID {Pid})", proc?.Id);
-                SafeKillProcessTree(proc);
-                return (false, "", "CANCELLED_BY_CLIENT", false);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "yt-dlp unexpected error (PID {Pid})", proc?.Id);
-                SafeKillProcessTree(proc);
-                return (false, "", ex.Message, false);
+                return (proc?.ExitCode == 0, stdout, stderr);
             }
             finally
             {
-                // Final safety net – ensures nothing is left behind even in weird edge cases
-                SafeKillProcessTree(proc);
-                proc?.Dispose();
+                SafeKillProcessTree(proc);   // your existing helper
+                if (proc !=null && proc.HasExited) proc?.Dispose();
             }
         }
 
+
+        private void SafeKillProcessTree(Process? process)
+        {
+            if (process == null || process.HasExited) return;
+
+            try
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    // Built-in tree kill on Windows – extremely fast, no WMI query needed
+                    _logger.LogInformation("going to kill windows process tree of get format method: {process}", process);
+                    process.Kill(entireProcessTree: true);
+                }
+                else
+                {
+                    // Only Linux/macOS fallback – still parallelized in your existing KillProcessTree
+                    var tree = _processControl.GetProcessTree(process.Id);
+                    _logger.LogInformation("going to kill linux / mac process tree of get format method: {tree}", tree);
+                    _processControl.KillProcessTree(tree);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Best-effort – we don't want a failed kill to crash the method
+                _logger.LogWarning(ex, "Failed to terminate yt-dlp process tree (PID {Pid})", process?.Id);
+            }
+        }
 
 
         public string? GetYtDlpCompatibleBrowser()
