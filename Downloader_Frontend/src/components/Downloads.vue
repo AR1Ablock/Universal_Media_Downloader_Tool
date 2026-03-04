@@ -38,22 +38,26 @@
           <div class="details">
             <span>{{ job.downloaded }} MB / {{ job.total }} MB</span>
             <span>Speed: {{ job.speed
-            }}{{ job.speed !== "N/A" && job.speed !== "0" ? "/s" : "" }}</span>
+              }}{{ job.speed !== "N/A" && job.speed !== "0" ? "/s" : "" }}</span>
             <span>Progress: {{ job.progress?.toFixed(2) ?? 0 }}%</span>
             <span>Job: {{ job.status }}</span>
           </div>
 
           <div class="buttons">
-            <button @click="pause(job.id)" class="btn pause" :disabled="jobCooling[job.id]">
+            <button @click="pause(job.id)" class="btn pause"
+              :disabled="jobCooling[job.id] || job.status == 'completed'">
               <i class="fas fa-pause" /> Pause
             </button>
-            <button @click="resume(job.id)" class="btn resume" :disabled="jobCooling[job.id]">
+            <button @click="resume(job.id)" class="btn resume"
+              :disabled="jobCooling[job.id] || job.status == 'completed'">
               <i class="fas fa-play" /> Resume
             </button>
-            <button @click="restart(job.id)" class="btn restart" :disabled="jobCooling[job.id]">
+            <button @click="restart(job.id)" class="btn restart"
+              :disabled="jobCooling[job.id] || job.status == 'completed'">
               <i class="fas fa-redo" /> Restart
             </button>
-            <button @click="newUrl(job.id)" class="btn resume_broken" :disabled="jobCooling[job.id]">
+            <button @click="newUrl(job.id)" class="btn resume_broken"
+              :disabled="jobCooling[job.id] || job.status == 'completed'">
               <i class="fas fa-link" /> Fix URL
             </button>
             <button @click="deleteFile(job.id)" class="btn delete icon-delete-file" :disabled="jobCooling[job.id]">
@@ -63,7 +67,8 @@
               :disabled="job.status !== 'completed'">
               <i class="fas fa-download"></i> Download
             </button>
-            <button @click="Open_File_Directory(job.id)" class="btn download" :disabled="job.status !== 'completed' && job.progress !== 100">
+            <button @click="Open_File_Directory(job.id)" class="btn download"
+              :disabled="job.status !== 'completed' ">
               <i class="fas fa-folder-open"></i> Open
             </button>
           </div>
@@ -105,7 +110,7 @@ async function updateProgress() {
       };
     });
   } catch (error) {
-    if (error.message.includes("Not Found")) {
+    if (error?.message.includes("Not Found")) {
       return;
     }
     handleNetworkError(error, "updateProgress");
@@ -113,19 +118,6 @@ async function updateProgress() {
 }
 
 
-
-async function downloadFile(jobId) {
-  if (!Is_Download_Enabled) {
-    return;
-  }
-
-  try {
-    const downloadUrl = `${ServerUrl}/download-file/${jobId}`;
-    window.open(downloadUrl, "_blank");
-  } catch (error) {
-    console.log(error.message);
-  }
-}
 
 async function check_OS() {
   try {
@@ -142,6 +134,7 @@ async function check_OS() {
   }
 }
 
+
 onMounted(() => {
   userKey.value = localStorage.getItem("MediaDownloaderUserKey");
   check_OS();
@@ -149,33 +142,40 @@ onMounted(() => {
   timer = setInterval(updateProgress, 1500);
 });
 
+
 onUnmounted(() => clearInterval(timer));
 
-function postAction(path, payload) {
+
+let action_in_progress = ref(false);
+
+async function postAction(path, payload) {
+  if (action_in_progress.value) return;
+
+  action_in_progress.value = true
   try {
-    return fetch(`${ServerUrl}/${path}`, {
+    const response = await fetch(`${ServerUrl}/${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    });
+    })
+    return response;
   } catch (error) {
-    handleNetworkError(error, `postAction(${path})`);
+    handleNetworkError(error, `postAction(${path})`)
+  } finally {
+    action_in_progress.value = false
   }
 }
-const pause = async (id) => await postAction("pause", { jobId: id });
-const resume = async (id) => await postAction("resume", { jobId: id });
-const deleteUI = async (id) => await postAction("delete-ui", { jobId: id });
-const deleteFile = async (id) => await postAction("delete-file", { jobId: id });
+
+const pause = async (id) => await postAction("pause", { jobId: id })
+const resume = async (id) => await postAction("resume", { jobId: id })
+const deleteUI = async (id) => await postAction("delete-ui", { jobId: id })
+const deleteFile = async (id) => await postAction("delete-file", { jobId: id })
 
 
-
-let file_opening = false;
-
-async function Open_File_Directory(id) { 
-  if (file_opening) return; 
-  file_opening = true;
+async function Open_File_Directory(id) {
   try {
     const res = await postAction("open-file", { jobId: id });
+    if (!res) return;
     const json = await res.json();
 
     if (json.message && json.message.includes("not found")) {
@@ -184,22 +184,22 @@ async function Open_File_Directory(id) {
   } catch (err) {
     console.error("Failed to open file directory", err);
     alert("Error: could not open folder");
-  } finally {
-    file_opening = false;   // always reset, even on error
   }
 }
 
 
-const restart = (id) => {
+async function restart(id) {
   try {
     const prev = jobs.value.find((j) => j.id === id)?.progress ?? 0;
     jobCooling[id] = true;
     watchForProgress(id, prev);
-    postAction("resume-fresh", { jobId: id });
+    await postAction("resume-fresh", { jobId: id });
   } catch (error) {
     console.log(error.message);
   }
 };
+
+
 
 async function newUrl(id) {
   try {
@@ -217,6 +217,8 @@ async function newUrl(id) {
   }
 }
 
+
+
 function copyUrl(id) {
   const text = jobUrls[id];
   if (text) {
@@ -229,9 +231,62 @@ function copyUrl(id) {
   }
 }
 
+
+
+async function downloadFile(jobId) {
+  if (!Is_Download_Enabled.value) return;
+  if (action_in_progress.value) return;
+
+  action_in_progress.value = true;
+  try {
+    const response = await fetch(`${ServerUrl}/download-file/${jobId}`, {
+      method: "GET"
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      alert(errorData.message || "Download failed");
+      return;
+    }
+
+    const blob = await response.blob();
+
+    // Get filename from Content-Disposition header
+    const contentDisposition = response.headers.get("Content-Disposition");
+    let fileName = "downloaded-file.mp4";
+
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="?(.+)"?/);
+      if (match?.[1]) {
+        fileName = match[1];
+      }
+    }
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error("Download error:", error);
+    alert("Something went wrong while downloading.");
+  }
+  finally {
+    action_in_progress.value = false;
+  }
+}
+
+
 // src/utils/handleNetworkError.js
 let lastNetworkErrorTime = 0;
 const NETWORK_ERROR_PAUSE_MS = 30000; // 30 seconds
+
+
 
 function handleNetworkError(error, context = "action") {
   const isNetworkError = error instanceof TypeError && error.message.includes("fetch");
