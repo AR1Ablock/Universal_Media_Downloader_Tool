@@ -11,6 +11,19 @@ namespace Downloader_Backend.Logic
         private readonly ILogger<ProcessControl>? _logger = logger;
 
 
+
+        private bool ProcessExists(int pid)
+        {
+            try
+            {
+                using var p = Process.GetProcessById(pid);
+                return !p.HasExited;
+            }
+            catch { return false; }
+        }
+
+
+
         public void Suspend(DownloadJob job)
         {
             if (OperatingSystem.IsWindows())
@@ -31,23 +44,37 @@ namespace Downloader_Backend.Logic
             {
                 try
                 {
+                    Process killProc;
                     Parallel.ForEach(job.ProcessTreePids, pid =>
                     {
-                        if (!Process.GetProcessById(pid).HasExited)
+                        if (!ProcessExists(pid)) return;
+
+                        var tree = GetProcessTree(pid); // now we use the correct root
+                        foreach (var p in tree.OrderByDescending(x => x)) // children first is safer
                         {
-                            using var proc = Process.Start("kill", $"-STOP {pid}");
-                            proc?.WaitForExit();
-                            if (proc != null)
+                            if (ProcessExists(p))
                             {
-                                var tree = GetProcessTree(proc.Id);
-                                KillProcessTree(tree); // kill the process tree
-                                proc?.Dispose(); // ensure the process is disposed
+                                _logger.LogInformation("Suspending the pid: {pid}", p);
+                                killProc = Process.Start("kill", $"-STOP {p}");
+                                killProc?.WaitForExit(500);
+                                // now kill the command below.
+                                if (killProc != null)
+                                {
+                                    var tree = GetProcessTree(killProc.Id);
+                                    KillProcessTree(tree); // kill the process tree
+                                    killProc?.Dispose(); // ensure the process is disposed
+                                }
                             }
                         }
                     });
                 }
                 catch (Exception ex)
                 {
+                    if (killProc)
+                    {
+                        killProc.WaitForExit();
+                        killProc.Dispose();
+                    }
                     _logger?.LogInformation("------Error suspending processes. " + ex.Message);
                 }
             }
@@ -76,22 +103,40 @@ namespace Downloader_Backend.Logic
             {
                 try
                 {
+                    Process Resume_Proc;
                     Parallel.ForEach(job.ProcessTreePids, pid =>
                     {
-                        using var proc = Process.Start("kill", $"-CONT {pid}");
-                        proc?.WaitForExit();
-                        if (proc != null)
+                        if (!ProcessExists(pid)) return;
+
+                        var tree = GetProcessTree(pid); // now we use the correct root
+                        foreach (var p in tree.OrderByDescending(x => x)) // children first is safer
                         {
-                            var tree = GetProcessTree(proc.Id);
-                            KillProcessTree(tree); // kill the process tree
-                            proc?.Dispose(); // ensure the process is disposed
+                            if (ProcessExists(p))
+                            {
+                                _logger.LogInformation("Resuming the pid: {pid}", p);
+                                Resume_Proc = Process.Start("kill", $"-CONT {p}");
+                                Resume_Proc?.WaitForExit(500);
+                                // now kill the command below.
+                                if (Resume_Proc != null)
+                                {
+                                    var tree = GetProcessTree(Resume_Proc.Id);
+                                    KillProcessTree(tree); // kill the process tree
+                                    Resume_Proc?.Dispose(); // ensure the process is disposed
+                                }
+                            }
                         }
                     });
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogInformation("------Error resuming processes. " + ex.Message);
+                    if (Resume_Proc)
+                    {
+                        Resume_Proc.WaitForExit();
+                        Resume_Proc.Dispose();
+                    }
+                    _logger?.LogInformation("------Error Resuming processes. " + ex.Message);
                 }
+
             }
         }
 
@@ -200,6 +245,8 @@ namespace Downloader_Backend.Logic
             return [.. alive];
         }
 
+
+
         public void KillProcessTree(List<int> pids)
         {
             var alivePids = GetAlivePids(pids);
@@ -217,8 +264,9 @@ namespace Downloader_Backend.Logic
                 try
                 {
                     using var proc = Process.GetProcessById(pid);
-                    if (!proc.HasExited)
+                    if (proc && !proc.HasExited)
                     {
+                        _logger?.LogInformation("killing process tree: {proc}", pid);
                         proc.Kill(entireProcessTree: true); // Kill tree on Windows; single process on Unix (loop handles all)
                     }
                 }
