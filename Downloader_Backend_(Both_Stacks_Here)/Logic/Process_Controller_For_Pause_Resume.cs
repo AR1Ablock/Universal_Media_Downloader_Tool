@@ -42,9 +42,9 @@ namespace Downloader_Backend.Logic
             }
             else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
             {
+                Process? killProc = null;
                 try
                 {
-                    Process killProc;
                     Parallel.ForEach(job.ProcessTreePids, pid =>
                     {
                         if (!ProcessExists(pid)) return;
@@ -54,14 +54,14 @@ namespace Downloader_Backend.Logic
                         {
                             if (ProcessExists(p))
                             {
-                                _logger.LogInformation("Suspending the pid: {pid}", p);
+                                _logger?.LogInformation("Suspending the pid: {pid}", p);
                                 killProc = Process.Start("kill", $"-STOP {p}");
                                 killProc?.WaitForExit(500);
                                 // now kill the command below.
                                 if (killProc != null)
                                 {
-                                    var tree = GetProcessTree(killProc.Id);
-                                    KillProcessTree(tree); // kill the process tree
+                                    var proc_tree = GetProcessTree(killProc.Id);
+                                    KillProcessTree(proc_tree); // kill the process tree
                                     killProc?.Dispose(); // ensure the process is disposed
                                 }
                             }
@@ -70,9 +70,9 @@ namespace Downloader_Backend.Logic
                 }
                 catch (Exception ex)
                 {
-                    if (killProc)
+                    if (killProc != null)
                     {
-                        killProc.WaitForExit();
+                        killProc.WaitForExit(500);
                         killProc.Dispose();
                     }
                     _logger?.LogInformation("------Error suspending processes. " + ex.Message);
@@ -101,9 +101,9 @@ namespace Downloader_Backend.Logic
             }
             else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
             {
+                Process? Resume_Proc = null;
                 try
                 {
-                    Process Resume_Proc;
                     Parallel.ForEach(job.ProcessTreePids, pid =>
                     {
                         if (!ProcessExists(pid)) return;
@@ -113,14 +113,14 @@ namespace Downloader_Backend.Logic
                         {
                             if (ProcessExists(p))
                             {
-                                _logger.LogInformation("Resuming the pid: {pid}", p);
+                                _logger?.LogInformation("Resuming the pid: {pid}", p);
                                 Resume_Proc = Process.Start("kill", $"-CONT {p}");
                                 Resume_Proc?.WaitForExit(500);
                                 // now kill the command below.
                                 if (Resume_Proc != null)
                                 {
-                                    var tree = GetProcessTree(Resume_Proc.Id);
-                                    KillProcessTree(tree); // kill the process tree
+                                    var proc_tree = GetProcessTree(Resume_Proc.Id);
+                                    KillProcessTree(proc_tree); // kill the process tree
                                     Resume_Proc?.Dispose(); // ensure the process is disposed
                                 }
                             }
@@ -129,9 +129,9 @@ namespace Downloader_Backend.Logic
                 }
                 catch (Exception ex)
                 {
-                    if (Resume_Proc)
+                    if (Resume_Proc != null)
                     {
-                        Resume_Proc.WaitForExit();
+                        Resume_Proc.WaitForExit(500);
                         Resume_Proc.Dispose();
                     }
                     _logger?.LogInformation("------Error Resuming processes. " + ex.Message);
@@ -187,7 +187,7 @@ namespace Downloader_Backend.Logic
                     if (proc != null)
                     {
                         var output = proc.StandardOutput.ReadToEnd();
-                        proc.WaitForExit();
+                        proc.WaitForExit(); // here we dont need to add ms due to this operation is longer.
                         Parallel.ForEach(output.Split('\n', StringSplitOptions.RemoveEmptyEntries), line =>
                         {
                             if (int.TryParse(line.Trim(), out int childPid))
@@ -264,10 +264,11 @@ namespace Downloader_Backend.Logic
                 try
                 {
                     using var proc = Process.GetProcessById(pid);
-                    if (proc && !proc.HasExited)
+                    if (!proc.HasExited)
                     {
                         _logger?.LogInformation("killing process tree: {proc}", pid);
                         proc.Kill(entireProcessTree: true); // Kill tree on Windows; single process on Unix (loop handles all)
+                        proc.WaitForExit(1000);
                     }
                 }
                 catch (ArgumentException)
