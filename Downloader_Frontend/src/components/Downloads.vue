@@ -123,7 +123,7 @@ async function check_OS() {
   try {
     const res = await fetch(`${ServerUrl}/OS_Check`);
     let data = await res.json();
-    if (data.is_download_enabled) {
+    if (data.is_Download_Enable) {
       Is_Download_Enabled.value = true;
     } else {
       Is_Download_Enabled.value = false;
