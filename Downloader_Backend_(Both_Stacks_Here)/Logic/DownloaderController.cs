@@ -19,7 +19,7 @@ namespace Downloader_Backend.Logic
         private readonly Utility _utility = utility;
         private readonly ProcessControl _processControl = processControl;
         private readonly IDownloadPersistence _download_history = download_history;
-        private readonly bool Download_Enable = false; // used for prodction build if app is hosted on a server.
+        private readonly bool Download_Enable = true; // used for prodction build if app is hosted on a server.
 
 
         [HttpPost("formats")]
@@ -114,9 +114,10 @@ namespace Downloader_Backend.Logic
                         Method = "yt-dlp",
                         Status = "pending",
                         Key = req.Key,
+                        TokenSource = Token_Source,
                     };
                     // await _download_history.Save_And_UpdateJobAsync(job); // save initial job state
-                    var result = await DownloadAsync(job, Token_Source.Token, false, false, false, false, Token_Key);
+                    var result = await _utility.DownloadAsync(job, Token_Source.Token, _globalCancellation, _download_history, _tracker, false, false, false, false, Token_Key);
                     return result;
                 }, Token_Source.Token);
 
@@ -128,196 +129,6 @@ namespace Downloader_Backend.Logic
                 return StatusCode(500, "Internal server error: " + ex.Message);
             }
 
-        }
-
-
-        private async Task<IActionResult> DownloadAsync(DownloadJob job, CancellationToken linkedToken, bool resume = false, bool restart = false, bool tryCookies = false, bool tryImpersonate = false, string Token_Key = "")
-        {
-            /*             var downloadsFolder = Path.Combine("downloads");
-                        Directory.CreateDirectory(downloadsFolder); */
-
-            string videoPath = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
-            string downloadsFolder = Path.Combine(videoPath, "Dlp_downloads");
-
-            Directory.CreateDirectory(downloadsFolder); // Ensures folder exists
-
-            var outputFile = Path.Combine(downloadsFolder, $"{job.Id}___{job.Title}.mp4");
-
-            var (ytDlpPath, ffmpegPath) = _utility.Local_Executables_Path();
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = ytDlpPath,
-                Environment = { ["FFMPEG"] = ffmpegPath }, // set FFMPEG
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,           // ✅ Hides console window
-                WindowStyle = ProcessWindowStyle.Hidden, // ✅ Ensures no console flash
-                StandardOutputEncoding = Encoding.UTF8,
-                StandardErrorEncoding = Encoding.UTF8
-            };
-
-            if (tryCookies)
-            {
-                psi.ArgumentList.Add("--cookies-from-browser");
-                psi.ArgumentList.Add("chrome");
-            }
-
-            if (tryImpersonate)
-            {
-                psi.ArgumentList.Add("--extractor-args");
-                psi.ArgumentList.Add("generic:impersonate");
-            }
-
-            if (resume)
-            {
-                psi.ArgumentList.Add("--continue");
-                job.Status = "resuming";
-            }
-            else if (restart)
-            {
-                ///psi.ArgumentList.Add("--no-continue");
-                job.Status = "restarting";
-                await Task.Delay(100); // give it a moment to settle
-            }
-
-            psi.ArgumentList.Add("-f"); psi.ArgumentList.Add(job.Format);
-            psi.ArgumentList.Add("--merge-output-format");
-            psi.ArgumentList.Add("mp4");
-            psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(outputFile);
-            psi.ArgumentList.Add("--progress-template");
-            psi.ArgumentList.Add("prog:%(progress._percent_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s|%(progress._speed_str)s");
-            psi.ArgumentList.Add("--newline");
-            psi.ArgumentList.Add(job.Url);
-
-            try
-            {
-                var proc = Process.Start(psi);
-                if (proc == null)
-                {
-                    job.Status = "failed";
-                    job.ErrorLog = "Process failed to start.";
-                    return StatusCode(500, "Failed to start download.");
-                }
-
-                job.Status = "downloading";
-                job.Process = proc;
-                job.ProcessTreePids = _processControl.GetProcessTree(proc.Id);
-
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        var stderr = proc.StandardError;
-                        var stdout = proc.StandardOutput;
-
-                        var stderrTask = Task.Run(async () =>
-                        {
-                            while (!stderr.EndOfStream)
-                            {
-                                var line = await stderr.ReadLineAsync(linkedToken);
-                                if (!string.IsNullOrWhiteSpace(line))
-                                    job.ErrorLog += "[stderr] " + line + "\n";
-                                job.Status = "fail-err";
-                            }
-                        }, linkedToken);
-
-                        var stdoutTask = Task.Run(async () =>
-                        {
-                            _globalCancellation.DetachTokenSource(Token_Key);
-                            job.OutputPath = outputFile;
-                            _tracker.Jobs[job.Id] = job;
-                            await _download_history.Save_And_UpdateJobAsync(job);  // now in DB
-                            string? line;
-                            while ((line = await stdout.ReadLineAsync(linkedToken)) != null)
-                            {
-                                if (line.StartsWith("prog:"))
-                                {
-                                    var parts = line[5..].Split('|');
-                                    if (parts.Length >= 4)
-                                    {
-                                        var pct = parts[0].TrimEnd('%', ' ');
-                                        if (double.TryParse(pct, out var percent))
-                                        {
-                                            job.Progress = percent;
-                                            job.LastProgressAt = DateTimeOffset.UtcNow;    // ← update here
-                                        }
-
-                                        job.Downloaded = (long)_utility.ParseHumanReadableSize(parts[1]);
-                                        job.Total = (long)_utility.ParseHumanReadableSize(parts[2]);
-                                        job.Speed = parts[3].Trim();
-                                        job.Status = "downloading";
-                                    }
-                                }
-                                else
-                                {
-                                    job.ErrorLog += "[stdout] " + line + "\n";
-                                    job.Status = "Trying";
-                                }
-                            }
-                        }, linkedToken);
-
-                        await Task.WhenAll(stderrTask, stdoutTask);
-                        await proc.WaitForExitAsync(linkedToken);
-                        job.Status = proc.ExitCode == 0 ? "completed" : "failed";
-                        await _download_history.Save_And_UpdateJobAsync(job); // save initial job state
-
-                        if (job.Status == "failed")
-                        {
-                            bool hasCookieError = _utility.CookieTriggers.Any(t => job.ErrorLog.Contains(t, StringComparison.OrdinalIgnoreCase));
-                            bool hasImpersonateError = _utility.ImpersonateTriggers.Any(t => job.ErrorLog.Contains(t, StringComparison.OrdinalIgnoreCase));
-
-                            if (hasCookieError && !tryCookies)
-                            {
-                                _logger.LogInformation("Downalod retrying with cookies");
-                                _processControl.KillProcessTree(job.ProcessTreePids);
-                                await DownloadAsync(job, linkedToken, resume, restart, tryCookies: true, false, Token_Key); // Retry with cookies
-                            }
-                            if (hasImpersonateError && !tryImpersonate)
-                            {
-                                _logger.LogInformation("Downalod retrying with impersonate");
-                                _processControl.KillProcessTree(job.ProcessTreePids);
-                                await DownloadAsync(job, linkedToken, resume, restart, false, tryImpersonate: true, Token_Key); // Retry with cookies
-                            }
-                            if (hasImpersonateError && hasCookieError)
-                            {
-                                _logger.LogInformation("Downalod retrying with impersonate and cookies");
-                                _processControl.KillProcessTree(job.ProcessTreePids);
-                                await DownloadAsync(job, linkedToken, resume, restart, tryCookies: true, tryImpersonate: true, Token_Key); // Retry with cookies
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _processControl.KillProcessTree(job.ProcessTreePids);
-                        _utility.Log_pids_tree(job);
-                        job.Status = "failed-ct";
-                        job.ErrorLog += $"Exception: {ex.Message}\n";
-                    }
-                    finally
-                    {
-                        if (proc?.Id > 0)
-                        {
-                            var tree = _processControl.GetProcessTree(proc.Id);
-                            _processControl.KillProcessTree(tree);
-                            _utility.Log_pids_tree(job);
-                            _globalCancellation.RemoveTokenSource(Token_Key);
-                        }
-                    }
-                }, linkedToken);
-
-                return Ok(new { jobId = job.Id, title = job.Title });
-            }
-            catch (Exception ex)
-            {
-                _processControl.KillProcessTree(job.ProcessTreePids);
-                _utility.Log_pids_tree(job);
-                job.Status = "failed-ct";
-                job.ErrorLog = $"Start Error: {ex.Message}";
-                _globalCancellation.RemoveTokenSource(Token_Key);
-                return StatusCode(500, "Process start failed: " + ex.Message);
-            }
         }
 
 
@@ -431,15 +242,15 @@ namespace Downloader_Backend.Logic
         [HttpPost("pause")]
         public async Task<IActionResult> Pause([FromBody] JobActionRequest req)
         {
-            if (_tracker.Jobs.TryGetValue(req.JobId, out var job) && job.Process != null && !job.Process.HasExited)
+            if (_tracker.Jobs.TryGetValue(req.JobId, out var job) && _processControl.TryGetPid(job.Process, out int pid) && _processControl.ProcessExists(pid))
             {
-                job.ProcessTreePids = _processControl.GetProcessTree(job.Process.Id);
+                job.ProcessTreePids = _processControl.GetProcessTree(pid);
                 _processControl.Suspend(job);
                 job.Status = "paused";
                 await _download_history.Save_And_UpdateJobAsync(job); // save paused state
                 return Ok();
             }
-            return NotFound();
+            return NotFound("Process has already dead in pause method");
         }
 
 
@@ -449,9 +260,9 @@ namespace Downloader_Backend.Logic
         {
             if (_tracker.Jobs.TryGetValue(req.JobId, out var job))
             {
-                if (job.Process != null && !job.Process.HasExited)
+                if (_processControl.TryGetPid(job.Process, out int pid) && _processControl.ProcessExists(pid))
                 {
-                    job.ProcessTreePids = _processControl.GetProcessTree(job.Process.Id);
+                    job.ProcessTreePids = _processControl.GetProcessTree(pid);
                     _processControl.Resume(job);
                     job.Status = "downloading";
                     await _download_history.Save_And_UpdateJobAsync(job); // save resumed state
@@ -474,15 +285,15 @@ namespace Downloader_Backend.Logic
                 return NotFound();
             await Pause(req);
             // 1) If there’s a live Process, kill it and wait for exit
-            if (job.Process != null && !job.Process.HasExited)
+            if (_processControl.TryGetPid(job.Process, out int pid) && _processControl.ProcessExists(pid))
             {
                 _processControl.KillProcessTree(job.ProcessTreePids);
                 _utility.Log_pids_tree(job);
-                job.Process.WaitForExit();
+                job?.Process?.WaitForExit();
             }
 
             // 2) Clean up all partial files
-            _utility.DeleteAllDownloadArtifacts(job.OutputPath);
+            _utility.DeleteAllDownloadArtifacts(job!.OutputPath);
 
             // 3) Reset state
             job.ErrorLog = "";
@@ -490,12 +301,13 @@ namespace Downloader_Backend.Logic
 
             var Token_Key = _globalCancellation.GenerateKey();
             var Token_Source = _globalCancellation.CreateTokenSource(Token_Key);
+            job.TokenSource = Token_Source;
 
             await Task.Delay(100, Token_Source.Token);
 
             // 4) Kick off a fresh download
             //    restart=true will *not* pass --continue, so yt-dlp starts from scratch
-            return await DownloadAsync(job, Token_Source.Token, resume: false, restart: true, false, false, Token_Key);
+            return await _utility.DownloadAsync(job, Token_Source.Token, _globalCancellation, _download_history, _tracker, resume: false, restart: true, false, false, Token_Key);
         }
 
 
@@ -517,9 +329,10 @@ namespace Downloader_Backend.Logic
 
                 var Token_Key = _globalCancellation.GenerateKey();
                 var Token_Source = _globalCancellation.CreateTokenSource(Token_Key);
+                oldJob.TokenSource = Token_Source;
 
                 await Task.Delay(100, Token_Source.Token);
-                return await DownloadAsync(oldJob, Token_Source.Token, resume: true, false, false, false, Token_Key);
+                return await _utility.DownloadAsync(oldJob, Token_Source.Token, _globalCancellation, _download_history, _tracker, resume: true, false, false, false, Token_Key);
             }
 
             return NotFound("Item not found.");
@@ -568,15 +381,28 @@ namespace Downloader_Backend.Logic
             {
                 try
                 {
-                    if (job.Process != null && !job.Process.HasExited)
+                    if (job?.TokenSource != null)
                     {
-                        _processControl.KillProcessTree(job.ProcessTreePids);
-                        _utility.Log_pids_tree(job);
-                        job.Process!.WaitForExit(); // ensure process is done                    
+                        job.TokenSource?.Cancel();   // signal cancellation
+                        job.TokenSource?.Dispose();  // free resources
+                        job.TokenSource = null;     // clear reference
                     }
-                    _processControl.KillProcessTree(job.ProcessTreePids);
-                    _utility.Log_pids_tree(job);
-                    _utility.DeleteAllDownloadArtifacts(job.OutputPath);
+
+                    if (_processControl.TryGetPid(job?.Process, out int pid) && _processControl.ProcessExists(pid))
+                    {
+                        _processControl.KillProcessTree(job?.ProcessTreePids!);
+                        job?.Process?.Dispose();
+                    }
+                    else
+                    {
+                        _processControl.KillProcessTree(job?.ProcessTreePids!);
+                        _utility.Log_pids_tree(job!);
+                    }
+
+                    if (job?.DownloadTask != null)
+                        await Task.WhenAny(job.DownloadTask, Task.Delay(1500));
+
+                    _utility.DeleteAllDownloadArtifacts(job?.OutputPath!);
                     _tracker.Jobs.TryRemove(req.JobId, out _); // remove from tracker
                     await _download_history.DeleteJobAsync(req.JobId); // remove from history
                 }
