@@ -19,7 +19,7 @@ namespace Downloader_Backend.Logic
         private readonly Utility _utility = utility;
         private readonly ProcessControl _processControl = processControl;
         private readonly IDownloadPersistence _download_history = download_history;
-        private readonly bool Download_Enable = true; // used for prodction build if app is hosted on a server.
+        private readonly bool Download_Enable = false; // used for prodction build if app is hosted on a server.
 
 
         [HttpPost("formats")]
