@@ -39,6 +39,14 @@ namespace Downloader_Backend.Model
         [NotMapped]
         public Process? Process { get; set; } // this can't be serialized or persisted
 
+        [JsonIgnore]
+        [NotMapped]
+        public CancellationTokenSource? TokenSource { get; set; }
+
+        [JsonIgnore]
+        [NotMapped]
+        public Task? DownloadTask { get; set; }
+
         [NotMapped]
         public List<int> ProcessTreePids { get; set; } = [];
 
