@@ -232,51 +232,25 @@ function copyUrl(id) {
 }
 
 
-
 async function downloadFile(jobId) {
   if (!Is_Download_Enabled.value) return;
   if (action_in_progress.value) return;
 
   action_in_progress.value = true;
+
   try {
-    const response = await fetch(`${ServerUrl}/download-file/${jobId}`, {
-      method: "GET"
-    });
+    const url = `${ServerUrl}/download-file/${jobId}`;
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      alert(errorData.message || "Download failed");
-      return;
-    }
-
-    const blob = await response.blob();
-
-    // Get filename from Content-Disposition header
-    const contentDisposition = response.headers.get("Content-Disposition");
-    let fileName = "downloaded-file.mp4";
-
-    if (contentDisposition) {
-      const match = contentDisposition.match(/filename="?(.+)"?/);
-      if (match?.[1]) {
-        fileName = match[1];
-      }
-    }
-
-    const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = fileName;
+    // No need to set a.download — the server already sends the correct filename!
     document.body.appendChild(a);
     a.click();
-
     a.remove();
-    window.URL.revokeObjectURL(url);
-
   } catch (error) {
     console.error("Download error:", error);
     alert("Something went wrong while downloading.");
-  }
-  finally {
+  } finally {
     action_in_progress.value = false;
   }
 }
