@@ -12,7 +12,7 @@ namespace Downloader_Backend.Logic
 
 
 
-        private bool ProcessExists(int pid)
+        public bool ProcessExists(int pid)
         {
             try
             {
@@ -22,6 +22,22 @@ namespace Downloader_Backend.Logic
             catch { return false; }
         }
 
+
+        public bool TryGetPid(Process? process, out int pid)
+        {
+            pid = 0;
+            if (process == null) return false;
+
+            try
+            {
+                pid = process.Id;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
 
         public void Suspend(DownloadJob job)
