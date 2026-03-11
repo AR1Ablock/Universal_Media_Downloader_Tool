@@ -1,10 +1,10 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Downloader_Backend.Model;
-using Serilog;
+using Microsoft.AspNetCore.Mvc;
 using Spectre.Console;
 
 namespace Downloader_Backend.Logic
@@ -14,7 +14,7 @@ namespace Downloader_Backend.Logic
 
         private readonly ProcessControl _processControl = processControl;
         private readonly ILogger<Utility> _logger = logger;
-        
+
         public static string Create_Path(bool Making_Logs_Path = true)
         {
             string Dir_Path;
@@ -69,52 +69,6 @@ namespace Downloader_Backend.Logic
                 _logger.LogInformation("----Killing Trees " + item);
             }
         }
-
-        /*         public void DeleteAllDownloadArtifacts(string outputPath)
-                {
-                    try
-                    {
-                        var dir = Path.GetDirectoryName(outputPath) ?? ".";
-                        var baseName = Path.GetFileName(outputPath); // full file name
-                        var filePrefix = baseName.Split('.')[0]; // just the GUID_name part
-
-                        // match: .mp4.part, .part-FragX.part, .ytdl, etc.
-                        var patterns = new[] {
-                    $"{filePrefix}*.part*",        // main.part + .part-FragX.part
-                    $"{filePrefix}*.ytdl",         // .ytdl meta
-                    $"{filePrefix}*.temp",         // if yt-dlp leaves .temp
-                    $"{filePrefix}*.m4a",          // if temp audio
-                    $"{filePrefix}*.f*.*.part"     // old format_id naming
-                };
-
-                        Parallel.ForEach(patterns, pattern =>
-
-                        {
-                            foreach (var file in Directory.GetFiles(dir, pattern))
-                            {
-                                try
-                                {
-                                    File.Delete(file);
-                                    _logger.LogInformation($"🗑 Deleted: {file}");
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.LogInformation($"⚠️ Failed to delete {file}: {ex.Message}");
-                                }
-                            }
-                        });
-                        if (File.Exists(outputPath))
-                        {
-                            File.Delete(outputPath);
-                            _logger.LogInformation($"🗑 Deleted main file: {outputPath}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogInformation($"❌ Error cleaning download files: {ex.Message}");
-                    }
-                }
-         */
 
 
         public void DeleteAllDownloadArtifacts(string outputPath)
@@ -624,6 +578,346 @@ namespace Downloader_Backend.Logic
 
 
 
+        public async Task<IActionResult> DownloadAsync(DownloadJob job, CancellationToken linkedToken, GlobalCancellationService _globalCancellation, IDownloadPersistence _download_history, DownloadTracker _tracker, bool resume = false, bool restart = false, bool tryCookies = false, bool tryImpersonate = false, string Token_Key = "")
+        {
+            string videoPath = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
+            string downloadsFolder = Path.Combine(videoPath, "Dlp_downloads");
+            Directory.CreateDirectory(downloadsFolder);
+
+            var outputFile = Path.Combine(downloadsFolder, $"{job.Id}___{job.Title}.mp4");
+            var (ytDlpPath, ffmpegPath) = Local_Executables_Path();
+
+            linkedToken.Register(() =>
+            {
+                job.Status = "canceled";
+                job.ErrorLog += "[INFO] Job canceled by user.\n";
+                _logger.LogInformation("User Cancel the job: {req}", linkedToken.IsCancellationRequested);
+            });
+
+            // Fire and forget - main method stays super clean
+            job.DownloadTask = Task.Run(async () =>
+            {
+                await ExecuteDownloadWithRetriesAsync(
+                    job,
+                    linkedToken,
+                    _globalCancellation,
+                    _download_history,
+                    _tracker,
+                    resume,
+                    restart,
+                    tryCookies,
+                    tryImpersonate,
+                    Token_Key,
+                    outputFile,
+                    ytDlpPath,
+                    ffmpegPath);
+            }, linkedToken);
+
+            return new OkObjectResult(new { jobId = job.Id, title = job.Title });
+        }
+
+
+
+        // ===================================================================
+        // 1. Strategy decision (exactly what you asked)
+        // ===================================================================
+        private List<DownloadStrategy> GetDownloadStrategies(bool tryCookies, bool tryImpersonate)
+        {
+            var list = new List<DownloadStrategy>();
+
+            if (tryCookies || tryImpersonate)
+            {
+                // Caller forced one combination → only run that
+                list.Add(new DownloadStrategy(tryCookies, tryImpersonate,
+                    tryCookies && tryImpersonate ? "both" : tryCookies ? "cookies" : "impersonate"));
+            }
+            else
+            {
+                // Default case (no flags passed) → order you wanted:
+                // impersonate → cookies → both
+                list.Add(new DownloadStrategy(false, true, "impersonate"));
+                list.Add(new DownloadStrategy(true, false, "cookies"));
+                list.Add(new DownloadStrategy(true, true, "both"));
+            }
+
+            return list;
+        }
+
+
+
+        // ===================================================================
+        // 2. Main retry orchestrator (tries ALL strategies then = failed)
+        // ===================================================================
+        private async Task ExecuteDownloadWithRetriesAsync(
+            DownloadJob job,
+            CancellationToken linkedToken,
+            GlobalCancellationService _globalCancellation,
+            IDownloadPersistence _download_history,
+            DownloadTracker _tracker,
+            bool resume,
+            bool restart,
+            bool tryCookies,
+            bool tryImpersonate,
+            string Token_Key,
+            string outputFile,
+            string ytDlpPath,
+            string ffmpegPath)
+        {
+            try
+            {
+                job.ErrorLog = ""; // fresh log
+                var strategies = GetDownloadStrategies(tryCookies, tryImpersonate);
+                bool overallSuccess = false;
+
+                for (int i = 0; i < strategies.Count; i++)
+                {
+                    var strategy = strategies[i];
+
+                    job.ErrorLog += $"\n\n=== ATTEMPT {i + 1}/{strategies.Count} → {strategy.Name.ToUpper()} ===\n";
+                    job.Status = $"attempting ({strategy.Name})";
+                    await _download_history.Save_And_UpdateJobAsync(job);
+
+                    bool success = await ExecuteSingleAttemptAsync(
+                        job,
+                        linkedToken,
+                        _globalCancellation,
+                        _download_history,
+                        _tracker,
+                        strategy.UseCookies,
+                        strategy.UseImpersonate,
+                        resume && i == 0,     // resume/restart only on first attempt
+                        restart && i == 0,
+                        outputFile,
+                        ytDlpPath,
+                        ffmpegPath,
+                        Token_Key);
+
+                    if (success)
+                    {
+                        overallSuccess = true;
+                        break;
+                    }
+                }
+
+                if (!overallSuccess)
+                {
+                    job.Status = "failed";
+                    await _download_history.Save_And_UpdateJobAsync(job);
+                    _logger.LogInformation($"Download job {job.Id} failed after trying all strategies");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogError("Download Cancelled By User and cancelation token get fired 1");
+                job.ErrorLog += "[INFO] Attempt canceled by user.\n";
+                job.Status = "canceled";
+                throw;   // ← IMPORTANT: rethrow so upper level stops immediately (no more strategies)
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Downloading error occured 1: {er}", ex.Message);
+                job.ErrorLog += $"[FATAL] {ex.Message}\n";
+                job.Status = "failed-ct";
+                await _download_history.Save_And_UpdateJobAsync(job);
+            }
+            finally
+            {
+                _globalCancellation.RemoveTokenSource(Token_Key);
+                job.DownloadTask = null;
+            }
+        }
+
+
+
+        // ===================================================================
+        // 3. Build ProcessStartInfo (clean & reusable)
+        // ===================================================================
+        private ProcessStartInfo BuildProcessStartInfo(
+            string ytDlpPath,
+            string ffmpegPath,
+            bool useCookies,
+            bool useImpersonate,
+            bool applyResume,
+            bool applyRestart,
+            DownloadJob job,
+            string outputFile)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = ytDlpPath,
+                Environment = { ["FFMPEG"] = ffmpegPath },
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
+            };
+
+            if (useCookies)
+            {
+                psi.ArgumentList.Add("--cookies-from-browser");
+                psi.ArgumentList.Add(GetYtDlpCompatibleBrowser() ?? "chrome");
+            }
+
+            if (useImpersonate)
+            {
+                psi.ArgumentList.Add("--impersonate");
+                psi.ArgumentList.Add(GetYtDlpCompatibleBrowser() ?? "chrome");
+                psi.ArgumentList.Add("--extractor-args");
+                psi.ArgumentList.Add("generic:impersonate");
+            }
+
+            if (applyResume)
+            {
+                psi.ArgumentList.Add("--continue");
+                job.Status = "resuming";
+            }
+            else if (applyRestart)
+            {
+                job.Status = "restarting";
+                // Task.Delay moved to caller to avoid blocking
+            }
+
+            // Common args
+            psi.ArgumentList.Add("-f"); psi.ArgumentList.Add(job.Format);
+            psi.ArgumentList.Add("--merge-output-format"); psi.ArgumentList.Add("mp4");
+            psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(outputFile);
+            psi.ArgumentList.Add("--progress-template");
+            psi.ArgumentList.Add("prog:%(progress._percent_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s|%(progress._speed_str)s");
+            psi.ArgumentList.Add("--newline");
+            psi.ArgumentList.Add(job.Url);
+
+            return psi;
+        }
+
+
+
+        // ===================================================================
+        // 4. Single attempt (process + monitoring) - now fully separate
+        // ===================================================================
+        private async Task<bool> ExecuteSingleAttemptAsync(
+            DownloadJob job,
+            CancellationToken linkedToken,
+            GlobalCancellationService _globalCancellation,
+            IDownloadPersistence _download_history,
+            DownloadTracker _tracker,
+            bool useCookies,
+            bool useImpersonate,
+            bool applyResume,
+            bool applyRestart,
+            string outputFile,
+            string ytDlpPath,
+            string ffmpegPath,
+            string Token_Key)
+        {
+            var psi = BuildProcessStartInfo(ytDlpPath, ffmpegPath, useCookies, useImpersonate, applyResume, applyRestart, job, outputFile);
+
+            Process? proc = null;
+            try
+            {
+                proc = Process.Start(psi);
+                if (proc == null)
+                {
+                    job.ErrorLog += "[ERROR] Process failed to start.\n";
+                    job.Status = "failed";
+                    await _download_history.Save_And_UpdateJobAsync(job);
+                    return false;
+                }
+
+                job.Process = proc;
+                job.ProcessTreePids = _processControl.GetProcessTree(proc.Id);
+                job.Status = "downloading";
+
+                // === Monitoring tasks (same as before) ===
+                var stderrTask = Task.Run(async () =>
+                {
+                    while (!proc.StandardError.EndOfStream)
+                    {
+                        var line = await proc.StandardError.ReadLineAsync(linkedToken);
+                        if (!string.IsNullOrWhiteSpace(line))
+                            job.ErrorLog += "[stderr] " + line + "\n";
+                        job.Status = "fail-err";
+                    }
+                }, linkedToken);
+
+                var stdoutTask = Task.Run(async () =>
+                {
+                    _globalCancellation.DetachTokenSource(Token_Key);
+                    job.OutputPath = outputFile;
+                    _tracker.Jobs[job.Id] = job;
+                    await _download_history.Save_And_UpdateJobAsync(job);
+
+                    string? line;
+                    while ((line = await proc.StandardOutput.ReadLineAsync(linkedToken)) != null)
+                    {
+                        if (line.StartsWith("prog:"))
+                        {
+                            var parts = line[5..].Split('|');
+                            if (parts.Length >= 4)
+                            {
+                                var pct = parts[0].TrimEnd('%', ' ');
+                                if (double.TryParse(pct, out var percent))
+                                {
+                                    job.Progress = percent;
+                                    job.LastProgressAt = DateTimeOffset.UtcNow;
+                                }
+                                job.Downloaded = (long)ParseHumanReadableSize(parts[1]);
+                                job.Total = (long)ParseHumanReadableSize(parts[2]);
+                                job.Speed = parts[3].Trim();
+                                job.Status = "downloading";
+                            }
+                        }
+                        else
+                        {
+                            job.ErrorLog += "[stdout] " + line + "\n";
+                            job.Status = "Trying";
+                        }
+                    }
+                }, linkedToken);
+
+                await Task.WhenAll(stderrTask, stdoutTask);
+                await proc.WaitForExitAsync(linkedToken);
+
+                bool success = proc.ExitCode == 0;
+                job.Status = success ? "completed" : "failed";
+                await _download_history.Save_And_UpdateJobAsync(job);
+
+                return success;
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogError("Download Cancelled By User and cancelation token get fired 2");
+                job.ErrorLog += "[INFO] Attempt canceled by user.\n";
+                job.Status = "canceled";
+                throw;   // ← IMPORTANT: rethrow so upper level stops immediately (no more strategies)
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Downloading error occured 2: {er}", ex.Message);
+                job.ErrorLog += $"[EXCEPTION] {ex.Message}\n";
+                job.Status = "failed-ct";
+                return false;
+            }
+            finally
+            {
+                if (proc?.Id > 0)
+                {
+                    var tree = _processControl.GetProcessTree(proc.Id);
+                    _processControl.KillProcessTree(tree);
+                    Log_pids_tree(job);
+                }
+                proc?.Dispose();
+            }
+        }
+
+        // Small helper record (cleaner than tuples)
+        private sealed record DownloadStrategy(bool UseCookies, bool UseImpersonate, string Name);
+
+
+
+
         public readonly string[] CookieTriggers =
         [
     "cookies", "login", "429", "too many requests", "rate limit",
@@ -782,6 +1076,8 @@ namespace Downloader_Backend.Logic
                 {
                     case YtDlpStrategy.ImpersonateOnly:
                     case YtDlpStrategy.CookiesAndImpersonate:
+                        psi.ArgumentList.Add("--impersonate");
+                        psi.ArgumentList.Add(GetYtDlpCompatibleBrowser() ?? "chrome");
                         psi.ArgumentList.Add("--extractor-args");
                         psi.ArgumentList.Add("generic:impersonate");
                         break;
@@ -806,7 +1102,7 @@ namespace Downloader_Backend.Logic
             finally
             {
                 SafeKillProcessTree(proc);   // your existing helper
-                if (proc !=null && proc.HasExited) proc?.Dispose();
+                if (proc != null && proc.HasExited) proc?.Dispose();
             }
         }
 
