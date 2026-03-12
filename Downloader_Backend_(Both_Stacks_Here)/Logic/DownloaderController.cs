@@ -1,7 +1,5 @@
-// DownloaderController.cs
-using System.Diagnostics;
+
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
 using Downloader_Backend.Model;
 using Microsoft.AspNetCore.Mvc;
@@ -117,7 +115,7 @@ namespace Downloader_Backend.Logic
                         TokenSource = Token_Source,
                     };
                     // await _download_history.Save_And_UpdateJobAsync(job); // save initial job state
-                    var result = await _utility.DownloadAsync(job, Token_Source.Token, _globalCancellation, _download_history, _tracker, false, false, false, false, Token_Key);
+                    var result = await _utility.DownloadAsync(job, _globalCancellation, _download_history, _tracker, Token_Source.Token, false, false, false, false, Token_Key);
                     return result;
                 }, Token_Source.Token);
 
@@ -307,7 +305,7 @@ namespace Downloader_Backend.Logic
 
             // 4) Kick off a fresh download
             //    restart=true will *not* pass --continue, so yt-dlp starts from scratch
-            return await _utility.DownloadAsync(job, Token_Source.Token, _globalCancellation, _download_history, _tracker, resume: false, restart: true, false, false, Token_Key);
+            return await _utility.DownloadAsync(job, _globalCancellation, _download_history, _tracker, Token_Source.Token ,resume: false, restart: true, false, false, Token_Key);
         }
 
 
@@ -332,7 +330,7 @@ namespace Downloader_Backend.Logic
                 oldJob.TokenSource = Token_Source;
 
                 await Task.Delay(100, Token_Source.Token);
-                return await _utility.DownloadAsync(oldJob, Token_Source.Token, _globalCancellation, _download_history, _tracker, resume: true, false, false, false, Token_Key);
+                return await _utility.DownloadAsync(oldJob, _globalCancellation, _download_history, _tracker, Token_Source.Token, resume: true, false, false, false, Token_Key);
             }
 
             return NotFound("Item not found.");
