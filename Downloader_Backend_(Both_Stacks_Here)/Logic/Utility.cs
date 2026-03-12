@@ -15,6 +15,24 @@ namespace Downloader_Backend.Logic
         private readonly ProcessControl _processControl = processControl;
         private readonly ILogger<Utility> _logger = logger;
 
+        private sealed record DownloadStrategy(bool UseCookies, bool UseImpersonate, string Name);
+
+        public readonly string[] CookieTriggers = ["cookies", "login", "429", "too many requests", "rate limit", "sabr", "sign in", "log in", "authentication required"];
+
+        public readonly string[] ImpersonateTriggers = ["Cloudflare anti-bot challenge", "Got HTTP Error 403 caused by Cloudflare", "generic:impersonate", "anti-bot challenge", "attention required!", "checking your browser", "just a moment", "cf-ray", "Ray ID"];
+
+        public readonly string[] PermanentErrorTriggers = ["video unavailable", "this video is unavailable", "private video", "private playlist", "this video is private", "sign in to view", "login required to view", "copyright", "copyrighted content", "removed by the uploader", "geo restricted", "geoblocked", "not available in your country", "not available in your region", "this content is not available", "age restricted", "age-restricted", "age gate"];
+
+        public enum YtDlpStrategy
+        {
+            Normal,
+            CookiesOnly,
+            ImpersonateOnly,
+            CookiesAndImpersonate
+        }
+
+
+
         public static string Create_Path(bool Making_Logs_Path = true)
         {
             string Dir_Path;
@@ -402,9 +420,9 @@ namespace Downloader_Backend.Logic
             catch (OperationCanceledException)
             {
                 // Client refreshed/navigated away → kill the yt-dlp process tree
-                if (proc?.Id > 0)
+                if (_processControl.TryGetPid(proc, out int pid))
                 {
-                    var tree = _processControl.GetProcessTree(proc.Id);
+                    var tree = _processControl.GetProcessTree(pid);
                     _processControl.KillProcessTree(tree);
                 }
                 _logger.LogInformation("GetTitle operation cancelled by client.");
@@ -413,9 +431,9 @@ namespace Downloader_Backend.Logic
             catch (Exception ex)
             {
                 // Any other error
-                if (proc?.Id > 0)
+                if (_processControl.TryGetPid(proc, out int pid))
                 {
-                    var tree = _processControl.GetProcessTree(proc.Id);
+                    var tree = _processControl.GetProcessTree(pid);
                     _processControl.KillProcessTree(tree);
                 }
                 _logger.LogInformation($"Error getting title: {ex.Message}");
@@ -423,9 +441,9 @@ namespace Downloader_Backend.Logic
             }
             finally
             {
-                if (proc?.Id > 0)
+                if (_processControl.TryGetPid(proc, out int pid))
                 {
-                    var tree = _processControl.GetProcessTree(proc.Id);
+                    var tree = _processControl.GetProcessTree(pid);
                     _processControl.KillProcessTree(tree);
                 }
                 proc?.Dispose();
@@ -447,9 +465,9 @@ namespace Downloader_Backend.Logic
             : "Media Name Not Found!"; // default thumbnail
 
             var formats = fmts.EnumerateArray()
-        .AsParallel()   // Enable parallel processing
-        .AsOrdered()    // Preserve original order in output
-        .Select(f =>
+            .AsParallel()   // Enable parallel processing
+            .AsOrdered()    // Preserve original order in output
+            .Select(f =>
             {
                 // skip encrypted signatures
                 if (f.TryGetProperty("signatureCipher", out _))
@@ -526,9 +544,9 @@ namespace Downloader_Backend.Logic
 
 
             var formats = fmts.EnumerateArray()
-        .AsParallel()   // Enable parallel processing
-        .AsOrdered()    // Preserve original order in output
-        .Select(f =>
+            .AsParallel()   // Enable parallel processing
+            .AsOrdered()    // Preserve original order in output
+            .Select(f =>
             {
                 string id = SafeGetString(f, "format_id");
                 string ext = SafeGetString(f, "ext", "mp4");
@@ -578,7 +596,7 @@ namespace Downloader_Backend.Logic
 
 
 
-        public async Task<IActionResult> DownloadAsync(DownloadJob job, CancellationToken linkedToken, GlobalCancellationService _globalCancellation, IDownloadPersistence _download_history, DownloadTracker _tracker, bool resume = false, bool restart = false, bool tryCookies = false, bool tryImpersonate = false, string Token_Key = "")
+        public async Task<IActionResult> DownloadAsync(DownloadJob job, GlobalCancellationService _globalCancellation, IDownloadPersistence _download_history, DownloadTracker _tracker, CancellationToken linkedToken, bool resume = false, bool restart = false, bool tryCookies = false, bool tryImpersonate = false, string Token_Key = "")
         {
             string videoPath = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
             string downloadsFolder = Path.Combine(videoPath, "Dlp_downloads");
@@ -599,7 +617,6 @@ namespace Downloader_Backend.Logic
             {
                 await ExecuteDownloadWithRetriesAsync(
                     job,
-                    linkedToken,
                     _globalCancellation,
                     _download_history,
                     _tracker,
@@ -610,7 +627,9 @@ namespace Downloader_Backend.Logic
                     Token_Key,
                     outputFile,
                     ytDlpPath,
-                    ffmpegPath);
+                    ffmpegPath,
+                    linkedToken
+                    );
             }, linkedToken);
 
             return new OkObjectResult(new { jobId = job.Id, title = job.Title });
@@ -650,7 +669,6 @@ namespace Downloader_Backend.Logic
         // ===================================================================
         private async Task ExecuteDownloadWithRetriesAsync(
             DownloadJob job,
-            CancellationToken linkedToken,
             GlobalCancellationService _globalCancellation,
             IDownloadPersistence _download_history,
             DownloadTracker _tracker,
@@ -661,7 +679,9 @@ namespace Downloader_Backend.Logic
             string Token_Key,
             string outputFile,
             string ytDlpPath,
-            string ffmpegPath)
+            string ffmpegPath,
+            CancellationToken linkedToken
+            )
         {
             try
             {
@@ -679,7 +699,6 @@ namespace Downloader_Backend.Logic
 
                     bool success = await ExecuteSingleAttemptAsync(
                         job,
-                        linkedToken,
                         _globalCancellation,
                         _download_history,
                         _tracker,
@@ -690,7 +709,9 @@ namespace Downloader_Backend.Logic
                         outputFile,
                         ytDlpPath,
                         ffmpegPath,
-                        Token_Key);
+                        Token_Key,
+                        linkedToken
+                        );
 
                     if (success)
                     {
@@ -799,7 +820,6 @@ namespace Downloader_Backend.Logic
         // ===================================================================
         private async Task<bool> ExecuteSingleAttemptAsync(
             DownloadJob job,
-            CancellationToken linkedToken,
             GlobalCancellationService _globalCancellation,
             IDownloadPersistence _download_history,
             DownloadTracker _tracker,
@@ -810,7 +830,9 @@ namespace Downloader_Backend.Logic
             string outputFile,
             string ytDlpPath,
             string ffmpegPath,
-            string Token_Key)
+            string Token_Key,
+            CancellationToken linkedToken
+            )
         {
             var psi = BuildProcessStartInfo(ytDlpPath, ffmpegPath, useCookies, useImpersonate, applyResume, applyRestart, job, outputFile);
 
@@ -838,7 +860,7 @@ namespace Downloader_Backend.Logic
                         var line = await proc.StandardError.ReadLineAsync(linkedToken);
                         if (!string.IsNullOrWhiteSpace(line))
                             job.ErrorLog += "[stderr] " + line + "\n";
-                        job.Status = "fail-err";
+                        job.Status = "disrupting";
                     }
                 }, linkedToken);
 
@@ -902,9 +924,9 @@ namespace Downloader_Backend.Logic
             }
             finally
             {
-                if (proc?.Id > 0)
+                if (_processControl.TryGetPid(proc, out int pid))
                 {
-                    var tree = _processControl.GetProcessTree(proc.Id);
+                    var tree = _processControl.GetProcessTree(pid);
                     _processControl.KillProcessTree(tree);
                     Log_pids_tree(job);
                 }
@@ -913,61 +935,7 @@ namespace Downloader_Backend.Logic
         }
 
         // Small helper record (cleaner than tuples)
-        private sealed record DownloadStrategy(bool UseCookies, bool UseImpersonate, string Name);
 
-
-
-
-        public readonly string[] CookieTriggers =
-        [
-    "cookies", "login", "429", "too many requests", "rate limit",
-    "sabr", "sign in", "log in", "authentication required"
-        ];
-
-        public readonly string[] ImpersonateTriggers =
-        [
-    "Cloudflare anti-bot challenge",
-    "Got HTTP Error 403 caused by Cloudflare",
-    "generic:impersonate",
-    "anti-bot challenge",
-    "attention required!",
-    "checking your browser",
-    "just a moment",
-    "cf-ray",
-    "Ray ID"
-        ];
-
-
-        public readonly string[] PermanentErrorTriggers =
-        [
-    "video unavailable",
-    "this video is unavailable",
-    "private video",
-    "private playlist",
-    "this video is private",
-    "sign in to view",
-    "login required to view",
-    "copyright",
-    "copyrighted content",
-    "removed by the uploader",
-    "geo restricted",
-    "geoblocked",
-    "not available in your country",
-    "not available in your region",
-    "this content is not available",
-    "age restricted",
-    "age-restricted",
-    "age gate"
-        ];
-
-
-        public enum YtDlpStrategy
-        {
-            Normal,
-            CookiesOnly,
-            ImpersonateOnly,
-            CookiesAndImpersonate
-        }
 
 
         public async Task<(bool success, string stdout, string stderr, bool loginRequired)> TryRunYtDlpAsync(string[] args, CancellationToken cancellationToken)
@@ -1122,9 +1090,12 @@ namespace Downloader_Backend.Logic
                 else
                 {
                     // Only Linux/macOS fallback – still parallelized in your existing KillProcessTree
-                    var tree = _processControl.GetProcessTree(process.Id);
-                    _logger.LogInformation("going to kill linux / mac process tree of get format method: {tree}", tree);
-                    _processControl.KillProcessTree(tree);
+                    if (_processControl.TryGetPid(process, out int pid))
+                    {
+                        var tree = _processControl.GetProcessTree(pid);
+                        _logger.LogInformation("going to kill linux / mac process tree of get format method: {tree}", tree);
+                        _processControl.KillProcessTree(tree);
+                    }
                 }
             }
             catch (Exception ex)
@@ -1182,7 +1153,7 @@ namespace Downloader_Backend.Logic
                     if (process != null)
                     {
                         string result = process.StandardOutput.ReadToEnd().Trim();
-                        process.WaitForExit();
+                        process?.WaitForExit();
                         browser = MapToSupportedBrowser(result);
                     }
                 }
@@ -1203,7 +1174,7 @@ namespace Downloader_Backend.Logic
                     if (process != null)
                     {
                         string result = process.StandardOutput.ReadToEnd().Trim();
-                        process.WaitForExit();
+                        process?.WaitForExit();
                         browser = MapToSupportedBrowser(result);
                     }
                 }
@@ -1214,9 +1185,9 @@ namespace Downloader_Backend.Logic
             }
             finally
             {
-                if (process!.Id > 0)
+                if (_processControl.TryGetPid(process, out int pid))
                 {
-                    var tree = _processControl.GetProcessTree(process!.Id);
+                    var tree = _processControl.GetProcessTree(pid);
                     _processControl.KillProcessTree(tree); // kill the process tree
                 }
                 process?.Dispose(); // ensure the process is disposed
