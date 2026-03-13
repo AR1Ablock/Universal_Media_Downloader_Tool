@@ -708,6 +708,7 @@ header h1 {
   margin-top: 2rem;
   list-style: none;
   padding: 0;
+  font-size: clamp(.8rem, 1vw, 1.2rem);
 }
 
 .info-list li {
@@ -719,4 +720,28 @@ header h1 {
   .open-btn {
     top: 40%;
   }
+}
+
+
+.Supported_site_btn {
+  border: none;
+  border-radius: .5rem;
+  font-family: ui-monospace;
+  font-weight: bolder;
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  color: white;
+  padding: .5rem 1rem;
+  cursor: pointer;
+  background: #6c5ce7;
+  margin: .5rem 0;
+}
+
+.Supported_site_btn:hover{
+  background: #341edd;
+  transition: all .3s ease;
+}
+
+.Supported_site_btn:active{
+  transform: scale(.9);
+  transition: all .2s ease;
 }

@@ -30,7 +30,7 @@
       <div class="modal">
         <h3 class="modal-title">Session Information</h3>
         <p>
-          Remember your username and password to view your downloads on any device with
+          Remember your <strong>username</strong> and <strong>password</strong> to view your downloads on your current device with different browsers using
           same login info.
         </p>
         <ul class="modal-list">
@@ -44,12 +44,13 @@
             ⚙️ Getting resolution, restarting or fix borken link download may take
             <strong>10–30s</strong>.
           </li>
+          <br>
           <li>
             🌐 Some video qualities may be area-restricted. If getting video resolution or
             download fails, just retry—or enable a VPN and try again.
           </li>
         </ul>
-        <button @click="confirmLogin" class="btn modal-btn">Understood</button>
+        <button autofocus="true" @click="confirmLogin" class="btn modal-btn">Understood</button>
       </div>
     </div>
   </transition>
@@ -225,7 +226,7 @@ function confirmLogin() {
 .modal-title {
   margin-top: 0;
   font-size: clamp(1rem, 2vw, 2rem);
-  color: #f5f5f5;
+  color: #ffffff;
   font-family: sans-serif;
   font-weight: bolder;
 }

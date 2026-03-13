@@ -333,14 +333,6 @@ function watchForProgress(id) {
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-  padding: 16px;
-  background: #0e0e1a;
-  font-family: "Roboto", sans-serif;
-  color: #eee;
-}
-
 .heading {
   font-size: clamp(1rem, 2vw, 3rem);
   font-weight: bold;

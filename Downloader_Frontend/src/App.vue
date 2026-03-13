@@ -93,18 +93,19 @@
               ⏳ Incomplete downloads expire after <strong>6 hours</strong>.
             </li>
             <li>
-              ⚠️ Some media resolutions may show <strong>0 MB</strong> size, but they are
-              still downloadable.
+              ⚠️ Some media resolutions may show <strong>0p</strong> or <strong>0 MB</strong> size, but they are
+              downloadable.
             </li>
             <li>
               ⚙️ Fetching resolution, restarting or fixing a broken download may take
-              <strong>10–30s</strong>.
+              <strong>10-30s</strong>.
             </li>
             <li>
-              🌐 Some video qualities may be geo‑restricted. If a download fails, retry—or
+              🌐 Some video qualities may be geo-restricted. If a download fails, retry—or
               enable a VPN and try again.
             </li>
           </ul>
+          <button class="Supported_site_btn" @click="openit">Supported Site List</button>
         </div>
       </transition>
       <!-- Edge Icon to Reopen -->
@@ -117,6 +118,11 @@
 import { ref, reactive, onMounted, onBeforeUnmount, watch, onUnmounted } from "vue";
 import Download from "./components/Downloads.vue";
 import Login from "./components/Login.vue";
+
+function openit(){
+  window.open('/Supported_Site.html', '_blank')
+}
+
 
 let ServerUrl = "http://localhost:5050/Downloader";
 // let ServerUrl = "https://mediadownloader.duckdns.org/Downloader";
@@ -255,6 +261,9 @@ async function getFormats() {
     loadingFormats.value = false;
   }
 }
+
+
+
 
 function generateDownloadId() {
   return `dl_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;

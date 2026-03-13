@@ -1,0 +1,4165 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "title": "Major Social Media & Global Video Sharing",
+      "description": "Foundational platforms for social networking and general user-generated content.",
+      "platforms": [
+        {
+          "name": "YouTube",
+          "popularity": 1
+        },
+        {
+          "name": "Facebook",
+          "popularity": 2
+        },
+        {
+          "name": "Instagram",
+          "popularity": 3
+        },
+        {
+          "name": "TikTok",
+          "popularity": 4
+        },
+        {
+          "name": "Twitter (X)",
+          "popularity": 5
+        },
+        {
+          "name": "Reddit",
+          "popularity": 6
+        },
+        {
+          "name": "Vimeo",
+          "popularity": 7
+        },
+        {
+          "name": "Dailymotion",
+          "popularity": 8
+        },
+        {
+          "name": "Pinterest",
+          "popularity": 9
+        },
+        {
+          "name": "Tumblr",
+          "popularity": 11
+        },
+        {
+          "name": "9gag",
+          "popularity": 13
+        },
+        {
+          "name": "Rumble",
+          "popularity": 14
+        },
+        {
+          "name": "Bluesky",
+          "popularity": 15
+        },
+        {
+          "name": "Blogger",
+          "popularity": 16
+        },
+        {
+          "name": "Weibo",
+          "popularity": 17
+        },
+        {
+          "name": "VK",
+          "popularity": 18
+        },
+        {
+          "name": "Likee",
+          "popularity": 19
+        },
+        {
+          "name": "Bigo",
+          "popularity": 20
+        },
+        {
+          "name": "XiaoHongShu",
+          "popularity": 21
+        },
+        {
+          "name": "Odnoklassniki",
+          "popularity": 22
+        },
+        {
+          "name": "EbaumsWorld",
+          "popularity": 24
+        },
+        {
+          "name": "BitChute",
+          "popularity": 25
+        },
+        {
+          "name": "Lbry",
+          "note": "Odysee",
+          "popularity": 26
+        },
+        {
+          "name": "Dzen",
+          "note": "formerly Yandex Zen",
+          "popularity": 27
+        },
+        {
+          "name": "17live",
+          "popularity": 28
+        },
+        {
+          "name": "BuzzFeed",
+          "popularity": 29
+        },
+        {
+          "name": "Streamable",
+          "popularity": 30
+        },
+        {
+          "name": "Loom",
+          "popularity": 31
+        },
+        {
+          "name": "Patreon",
+          "popularity": 32
+        },
+        {
+          "name": "PeerTube",
+          "popularity": 33
+        },
+        {
+          "name": "SnapchatSpotlight",
+          "popularity": 34
+        },
+        {
+          "name": "Aparat",
+          "popularity": 35
+        },
+        {
+          "name": "BannedVideo",
+          "popularity": 36
+        },
+        {
+          "name": "Boosty",
+          "popularity": 37
+        },
+        {
+          "name": "Coub",
+          "popularity": 38
+        },
+        {
+          "name": "Dumpert",
+          "popularity": 39
+        },
+        {
+          "name": "fc2",
+          "popularity": 40
+        },
+        {
+          "name": "Gettr",
+          "popularity": 41
+        },
+        {
+          "name": "Minds",
+          "popularity": 42
+        },
+        {
+          "name": "Newgrounds",
+          "popularity": 43
+        },
+        {
+          "name": "Rutube",
+          "popularity": 44
+        },
+        {
+          "name": "ThreeSpeak",
+          "popularity": 45
+        },
+        {
+          "name": "YouNow",
+          "popularity": 46
+        },
+        {
+          "name": "Triller",
+          "popularity": 47
+        },
+        {
+          "name": "Skeb",
+          "popularity": 48
+        },
+        {
+          "name": "Gab",
+          "popularity": 49
+        },
+        {
+          "name": "23video",
+          "popularity": 50
+        },
+        {
+          "name": "Allstar",
+          "popularity": 51
+        },
+        {
+          "name": "Amara",
+          "popularity": 52
+        },
+        {
+          "name": "BanBye",
+          "popularity": 53
+        },
+        {
+          "name": "BeaconTv",
+          "popularity": 54
+        },
+        {
+          "name": "blerp",
+          "popularity": 55
+        },
+        {
+          "name": "Box",
+          "popularity": 56
+        },
+        {
+          "name": "Chilloutzone",
+          "popularity": 57
+        },
+        {
+          "name": "Clippit",
+          "popularity": 58
+        },
+        {
+          "name": "Cracked",
+          "popularity": 59
+        },
+        {
+          "name": "CrooksAndLiars",
+          "popularity": 60
+        },
+        {
+          "name": "CrowdBunker",
+          "popularity": 61
+        },
+        {
+          "name": "Dropbox",
+          "popularity": 62
+        },
+        {
+          "name": "Flickr",
+          "popularity": 63
+        },
+        {
+          "name": "Funker530",
+          "popularity": 64
+        },
+        {
+          "name": "Glide",
+          "popularity": 65
+        },
+        {
+          "name": "Gofile",
+          "popularity": 66
+        },
+        {
+          "name": "Imgur",
+          "popularity": 67
+        },
+        {
+          "name": "Livestreamfails",
+          "popularity": 68
+        },
+        {
+          "name": "Mojevideo",
+          "popularity": 69
+        },
+        {
+          "name": "Mojvideo",
+          "popularity": 70
+        },
+        {
+          "name": "MySpace",
+          "popularity": 71
+        },
+        {
+          "name": "MyVidster",
+          "popularity": 72
+        },
+        {
+          "name": "Nitter",
+          "popularity": 73
+        },
+        {
+          "name": "nowness",
+          "popularity": 74
+        },
+        {
+          "name": "OraTV",
+          "popularity": 75
+        },
+        {
+          "name": "OwnCloud",
+          "popularity": 76
+        },
+        {
+          "name": "Parler",
+          "popularity": 77
+        },
+        {
+          "name": "PearVideo",
+          "popularity": 78
+        },
+        {
+          "name": "playeur",
+          "popularity": 79
+        },
+        {
+          "name": "Sapo",
+          "popularity": 80
+        },
+        {
+          "name": "Scrolller",
+          "popularity": 81
+        },
+        {
+          "name": "Sen",
+          "popularity": 82
+        },
+        {
+          "name": "Shiey",
+          "popularity": 83
+        },
+        {
+          "name": "Snotr",
+          "popularity": 84
+        },
+        {
+          "name": "Streaks",
+          "popularity": 85
+        },
+        {
+          "name": "Substack",
+          "popularity": 86
+        },
+        {
+          "name": "TapTapApp",
+          "popularity": 87
+        },
+        {
+          "name": "ttinglive",
+          "popularity": 88
+        },
+        {
+          "name": "Truth",
+          "popularity": 89
+        },
+        {
+          "name": "56.com",
+          "popularity": 90
+        },
+        {
+          "name": "altcensored",
+          "popularity": 91
+        },
+        {
+          "name": "GabTV",
+          "popularity": 93
+        },
+        {
+          "name": "Ku6",
+          "popularity": 94
+        },
+        {
+          "name": "mailru",
+          "popularity": 95
+        },
+        {
+          "name": "Meipai",
+          "popularity": 96
+        },
+        {
+          "name": "MySpass",
+          "popularity": 97
+        },
+        {
+          "name": "play.tv",
+          "popularity": 98
+        },
+        {
+          "name": "Subsplash",
+          "popularity": 99
+        },
+        {
+          "name": "VidLii",
+          "popularity": 100
+        },
+        {
+          "name": "WeVidi",
+          "popularity": 101
+        },
+        {
+          "name": "AitubeKZVideo",
+          "popularity": 102
+        },
+        {
+          "name": "Alibaba",
+          "popularity": 103
+        },
+        {
+          "name": "AliExpressLive",
+          "popularity": 104
+        },
+        {
+          "name": "asobichannel",
+          "popularity": 105
+        },
+        {
+          "name": "AsobiStage",
+          "popularity": 106
+        },
+        {
+          "name": "BaiduVideo",
+          "popularity": 107
+        },
+        {
+          "name": "CaffeineTV",
+          "popularity": 108
+        },
+        {
+          "name": "chzzk",
+          "popularity": 109
+        },
+        {
+          "name": "Clipchamp",
+          "popularity": 110
+        },
+        {
+          "name": "CozyTV",
+          "popularity": 111
+        },
+        {
+          "name": "CultureUnplugged",
+          "popularity": 112
+        },
+        {
+          "name": "damtomo",
+          "popularity": 113
+        },
+        {
+          "name": "dlive",
+          "popularity": 115
+        },
+        {
+          "name": "Douyin",
+          "popularity": 116
+        },
+        {
+          "name": "Douyu",
+          "popularity": 117
+        },
+        {
+          "name": "Floatplane",
+          "popularity": 118
+        },
+        {
+          "name": "FuyinTV",
+          "popularity": 119
+        },
+        {
+          "name": "GameJolt",
+          "popularity": 120
+        },
+        {
+          "name": "goodgame",
+          "popularity": 121
+        },
+        {
+          "name": "HitRecord",
+          "popularity": 122
+        },
+        {
+          "name": "Holodex",
+          "popularity": 123
+        },
+        {
+          "name": "Huajiao",
+          "popularity": 124
+        },
+        {
+          "name": "huya",
+          "popularity": 125
+        },
+        {
+          "name": "IdolPlus",
+          "popularity": 126
+        },
+        {
+          "name": "Ixigua",
+          "popularity": 127
+        },
+        {
+          "name": "Kakao",
+          "popularity": 128
+        },
+        {
+          "name": "Kenh14",
+          "popularity": 129
+        },
+        {
+          "name": "kick",
+          "popularity": 130
+        },
+        {
+          "name": "KukuluLive",
+          "popularity": 131
+        },
+        {
+          "name": "livestream",
+          "popularity": 132
+        },
+        {
+          "name": "Loco",
+          "popularity": 133
+        },
+        {
+          "name": "mirrativ",
+          "popularity": 134
+        },
+        {
+          "name": "mixch",
+          "popularity": 135
+        },
+        {
+          "name": "MochaVideo",
+          "popularity": 136
+        },
+        {
+          "name": "MyVideoGe",
+          "popularity": 137
+        },
+        {
+          "name": "Nate",
+          "popularity": 138
+        },
+        {
+          "name": "Naver",
+          "popularity": 139
+        },
+        {
+          "name": "navernow",
+          "popularity": 140
+        },
+        {
+          "name": "niconico",
+          "popularity": 141
+        },
+        {
+          "name": "NiconicoChannelPlus",
+          "popularity": 142
+        },
+        {
+          "name": "Nintendo",
+          "popularity": 143
+        },
+        {
+          "name": "nuum",
+          "popularity": 144
+        },
+        {
+          "name": "openrec",
+          "popularity": 145
+        },
+        {
+          "name": "PandaTv",
+          "popularity": 146
+        },
+        {
+          "name": "parti",
+          "popularity": 147
+        },
+        {
+          "name": "peer.tv",
+          "popularity": 148
+        },
+        {
+          "name": "periscope",
+          "popularity": 149
+        },
+        {
+          "name": "picarto",
+          "popularity": 150
+        },
+        {
+          "name": "PlVideo",
+          "popularity": 151
+        },
+        {
+          "name": "PrankCast",
+          "popularity": 152
+        },
+        {
+          "name": "Rokfin",
+          "popularity": 153
+        },
+        {
+          "name": "RoosterTeeth",
+          "popularity": 154
+        },
+        {
+          "name": "ShowRoomLive",
+          "popularity": 155
+        },
+        {
+          "name": "Sina",
+          "popularity": 156
+        },
+        {
+          "name": "soop",
+          "popularity": 157
+        },
+        {
+          "name": "StreamCZ",
+          "popularity": 158
+        },
+        {
+          "name": "toutiao",
+          "popularity": 159
+        },
+        {
+          "name": "Trovo",
+          "popularity": 160
+        },
+        {
+          "name": "TwitCasting",
+          "popularity": 161
+        },
+        {
+          "name": "twitch",
+          "popularity": 162
+        },
+        {
+          "name": "ustream",
+          "popularity": 163
+        },
+        {
+          "name": "Veo",
+          "popularity": 164
+        },
+        {
+          "name": "Videa",
+          "popularity": 165
+        },
+        {
+          "name": "video.arnes.si",
+          "popularity": 166
+        },
+        {
+          "name": "Vimm",
+          "popularity": 167
+        },
+        {
+          "name": "VKPlay",
+          "popularity": 168
+        },
+        {
+          "name": "VuClip",
+          "popularity": 169
+        },
+        {
+          "name": "wat.tv",
+          "popularity": 170
+        },
+        {
+          "name": "WorldStarHipHop",
+          "popularity": 171
+        },
+        {
+          "name": "wykop",
+          "popularity": 172
+        },
+        {
+          "name": "Xinpianchang",
+          "popularity": 173
+        },
+        {
+          "name": "YandexVideo",
+          "popularity": 174
+        },
+        {
+          "name": "youku",
+          "popularity": 175
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Movies, Cinema & Film Databases",
+      "description": "Platforms dedicated to feature films, trailers, and movie industry databases.",
+      "platforms": [
+        {
+          "name": "IMDb",
+          "popularity": 1
+        },
+        {
+          "name": "RottenTomatoes",
+          "popularity": 2
+        },
+        {
+          "name": "Cineverse",
+          "popularity": 3
+        },
+        {
+          "name": "KinoPoisk",
+          "popularity": 4
+        },
+        {
+          "name": "Netzkino",
+          "popularity": 5
+        },
+        {
+          "name": "nfb",
+          "note": "National Film Board of Canada",
+          "popularity": 6
+        },
+        {
+          "name": "Popcorntimes",
+          "popularity": 7
+        },
+        {
+          "name": "Allocine",
+          "popularity": 8
+        },
+        {
+          "name": "AppleTrailers",
+          "popularity": 9
+        },
+        {
+          "name": "Moviepilot",
+          "popularity": 10
+        },
+        {
+          "name": "Filmweb",
+          "popularity": 11
+        },
+        {
+          "name": "Bigflix",
+          "popularity": 12
+        },
+        {
+          "name": "FreeTvMovies",
+          "popularity": 13
+        },
+        {
+          "name": "MovingImage",
+          "popularity": 14
+        },
+        {
+          "name": "CinetecaMilano",
+          "popularity": 15
+        },
+        {
+          "name": "Croatian.film",
+          "popularity": 16
+        },
+        {
+          "name": "FilmArchiv",
+          "popularity": 17
+        },
+        {
+          "name": "AtresPlayer",
+          "popularity": 18
+        },
+        {
+          "name": "CeskaTelevize",
+          "popularity": 19
+        },
+        {
+          "name": "CONtv",
+          "popularity": 20
+        },
+        {
+          "name": "Mave",
+          "popularity": 21
+        },
+        {
+          "name": "PopcornTV",
+          "popularity": 22
+        },
+        {
+          "name": "PlaySuisse",
+          "popularity": 23
+        },
+        {
+          "name": "Elonet",
+          "popularity": 25
+        },
+        {
+          "name": "ElTreceTV",
+          "popularity": 26
+        },
+        {
+          "name": "IndavideoEmbed",
+          "popularity": 27
+        },
+        {
+          "name": "InternetVideoArchive",
+          "popularity": 28
+        },
+        {
+          "name": "MoviewPlay",
+          "popularity": 29
+        },
+        {
+          "name": "Moviezine",
+          "popularity": 30
+        },
+        {
+          "name": "Playtvak",
+          "popularity": 31
+        },
+        {
+          "name": "VideoDetective",
+          "popularity": 32
+        },
+        {
+          "name": "Visir",
+          "popularity": 33
+        },
+        {
+          "name": "freetv",
+          "popularity": 34
+        },
+        {
+          "name": "Ruv",
+          "popularity": 35
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Music, Podcasts & Audio Platforms",
+      "description": "Services focused on music streaming, albums, podcasts, and audio sharing.",
+      "platforms": [
+        {
+          "name": "SoundCloud",
+          "popularity": 1
+        },
+        {
+          "name": "Apple Music",
+          "popularity": 2
+        },
+        {
+          "name": "Bandcamp",
+          "popularity": 3
+        },
+        {
+          "name": "Vevo",
+          "popularity": 4
+        },
+        {
+          "name": "JioSaavn",
+          "popularity": 5
+        },
+        {
+          "name": "QQ Music",
+          "popularity": 6
+        },
+        {
+          "name": "Netease",
+          "note": "Cloud Music",
+          "popularity": 8
+        },
+        {
+          "name": "Yandex Music",
+          "popularity": 9
+        },
+        {
+          "name": "ZingMP3",
+          "popularity": 10
+        },
+        {
+          "name": "iHeartRadio",
+          "popularity": 11
+        },
+        {
+          "name": "ApplePodcasts",
+          "popularity": 12
+        },
+        {
+          "name": "TuneIn",
+          "popularity": 13
+        },
+        {
+          "name": "Mixcloud",
+          "popularity": 14
+        },
+        {
+          "name": "Audiomack",
+          "popularity": 15
+        },
+        {
+          "name": "Audius",
+          "popularity": 16
+        },
+        {
+          "name": "Bandlab",
+          "popularity": 17
+        },
+        {
+          "name": "Beatport",
+          "popularity": 18
+        },
+        {
+          "name": "Acast",
+          "popularity": 19
+        },
+        {
+          "name": "Mixlr",
+          "popularity": 20
+        },
+        {
+          "name": "AudioBoom",
+          "popularity": 21
+        },
+        {
+          "name": "Soundgasm",
+          "popularity": 22
+        },
+        {
+          "name": "ReverbNation",
+          "popularity": 23
+        },
+        {
+          "name": "Hungama",
+          "popularity": 24
+        },
+        {
+          "name": "Ximalaya",
+          "popularity": 25
+        },
+        {
+          "name": "Spreaker",
+          "popularity": 26
+        },
+        {
+          "name": "PlayerFm",
+          "popularity": 28
+        },
+        {
+          "name": "Vocaroo",
+          "popularity": 29
+        },
+        {
+          "name": "DigitallySpeaking",
+          "popularity": 30
+        },
+        {
+          "name": "EpidemicSound",
+          "popularity": 31
+        },
+        {
+          "name": "Freesound",
+          "popularity": 32
+        },
+        {
+          "name": "Clyp",
+          "popularity": 33
+        },
+        {
+          "name": "Idagio",
+          "popularity": 34
+        },
+        {
+          "name": "MonsterSiren",
+          "popularity": 35
+        },
+        {
+          "name": "Musicdex",
+          "popularity": 36
+        },
+        {
+          "name": "PalcoMP3",
+          "popularity": 37
+        },
+        {
+          "name": "HearThisAt",
+          "popularity": 38
+        },
+        {
+          "name": "ListenNotes",
+          "popularity": 39
+        },
+        {
+          "name": "Art19",
+          "popularity": 40
+        },
+        {
+          "name": "GlobalPlayerAudio",
+          "popularity": 41
+        },
+        {
+          "name": "CJSW",
+          "popularity": 42
+        },
+        {
+          "name": "DiscogsReleasePlaylist",
+          "popularity": 43
+        },
+        {
+          "name": "8tracks",
+          "popularity": 44
+        },
+        {
+          "name": "AnchorFM",
+          "popularity": 45
+        },
+        {
+          "name": "ARDAudiothek",
+          "popularity": 46
+        },
+        {
+          "name": "Jamendo",
+          "popularity": 47
+        },
+        {
+          "name": "LastFM",
+          "popularity": 48
+        },
+        {
+          "name": "Libsyn",
+          "popularity": 49
+        },
+        {
+          "name": "Monstercat",
+          "popularity": 50
+        },
+        {
+          "name": "Stitcher",
+          "popularity": 51
+        },
+        {
+          "name": "Whyp",
+          "popularity": 52
+        },
+        {
+          "name": "Simplecast",
+          "popularity": 53
+        },
+        {
+          "name": "PodbayFM",
+          "popularity": 54
+        },
+        {
+          "name": "NoicePodcast",
+          "popularity": 55
+        },
+        {
+          "name": "RadioComercial",
+          "popularity": 56
+        },
+        {
+          "name": "Ivoox",
+          "popularity": 57
+        },
+        {
+          "name": "BeatBump",
+          "popularity": 59
+        },
+        {
+          "name": "dlf",
+          "popularity": 60
+        },
+        {
+          "name": "Drooble",
+          "popularity": 61
+        },
+        {
+          "name": "eggs",
+          "popularity": 62
+        },
+        {
+          "name": "Genius",
+          "popularity": 63
+        },
+        {
+          "name": "Hypem",
+          "popularity": 64
+        },
+        {
+          "name": "MagentaMusik",
+          "popularity": 65
+        },
+        {
+          "name": "MujRozhlas",
+          "popularity": 66
+        },
+        {
+          "name": "NinaProtocol",
+          "popularity": 67
+        },
+        {
+          "name": "OnePlacePodcast",
+          "popularity": 68
+        },
+        {
+          "name": "Piapro",
+          "popularity": 69
+        },
+        {
+          "name": "Podchaser",
+          "popularity": 70
+        },
+        {
+          "name": "PolskieRadio",
+          "popularity": 71
+        },
+        {
+          "name": "PRX",
+          "popularity": 72
+        },
+        {
+          "name": "RadioKapital",
+          "popularity": 73
+        },
+        {
+          "name": "RadioZetPodcast",
+          "popularity": 74
+        },
+        {
+          "name": "RideHome",
+          "popularity": 75
+        },
+        {
+          "name": "RinseFM",
+          "popularity": 76
+        },
+        {
+          "name": "Rozhlas",
+          "popularity": 77
+        },
+        {
+          "name": "RTRFM",
+          "popularity": 78
+        },
+        {
+          "name": "SampleFocus",
+          "popularity": 79
+        },
+        {
+          "name": "StreetVoice",
+          "popularity": 80
+        },
+        {
+          "name": "tokfm",
+          "popularity": 81
+        },
+        {
+          "name": "umg:de",
+          "popularity": 82
+        },
+        {
+          "name": "Audiodraft",
+          "popularity": 83
+        },
+        {
+          "name": "Callin",
+          "popularity": 84
+        },
+        {
+          "name": "CamFMEpisode",
+          "popularity": 85
+        },
+        {
+          "name": "Faulio",
+          "popularity": 86
+        },
+        {
+          "name": "FranceInter",
+          "popularity": 87
+        },
+        {
+          "name": "MelonVOD",
+          "popularity": 88
+        },
+        {
+          "name": "Mx3",
+          "popularity": 89
+        },
+        {
+          "name": "njoy",
+          "popularity": 90
+        },
+        {
+          "name": "nts.live",
+          "popularity": 91
+        },
+        {
+          "name": "onsen",
+          "popularity": 92
+        },
+        {
+          "name": "Radio1Be",
+          "popularity": 93
+        },
+        {
+          "name": "RadioFrance",
+          "popularity": 94
+        },
+        {
+          "name": "AmadeusTV",
+          "popularity": 95
+        },
+        {
+          "name": "DigitalConcertHall",
+          "popularity": 96
+        },
+        {
+          "name": "FranceCulture",
+          "popularity": 97
+        },
+        {
+          "name": "google:podcasts",
+          "popularity": 98
+        },
+        {
+          "name": "Medici",
+          "popularity": 99
+        },
+        {
+          "name": "MuseScore",
+          "popularity": 100
+        },
+        {
+          "name": "PhilharmonieDeParis",
+          "popularity": 101
+        },
+        {
+          "name": "PiaLive",
+          "popularity": 102
+        },
+        {
+          "name": "QingTing",
+          "popularity": 103
+        },
+        {
+          "name": "Radiko",
+          "popularity": 104
+        },
+        {
+          "name": "radlive",
+          "popularity": 105
+        },
+        {
+          "name": "StagePlus",
+          "popularity": 106
+        },
+        {
+          "name": "sverigesradio",
+          "popularity": 107
+        },
+        {
+          "name": "ThisAmericanLife",
+          "popularity": 108
+        },
+        {
+          "name": "Weverse",
+          "popularity": 109
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "TV Networks & Broadcasters",
+      "description": "National and international television stations providing various programming.",
+      "platforms": [
+        {
+          "name": "BBC",
+          "popularity": 1
+        },
+        {
+          "name": "NBC",
+          "popularity": 2
+        },
+        {
+          "name": "PBS",
+          "popularity": 4
+        },
+        {
+          "name": "FOX",
+          "popularity": 5
+        },
+        {
+          "name": "ABC",
+          "popularity": 6
+        },
+        {
+          "name": "ARD",
+          "popularity": 7
+        },
+        {
+          "name": "ZDF",
+          "popularity": 8
+        },
+        {
+          "name": "NHK",
+          "popularity": 9
+        },
+        {
+          "name": "Rai",
+          "popularity": 10
+        },
+        {
+          "name": "RTL",
+          "popularity": 11
+        },
+        {
+          "name": "RTVE",
+          "popularity": 12
+        },
+        {
+          "name": "TF1",
+          "popularity": 13
+        },
+        {
+          "name": "CCTV",
+          "popularity": 14
+        },
+        {
+          "name": "CBC",
+          "popularity": 15
+        },
+        {
+          "name": "ITV",
+          "popularity": 16
+        },
+        {
+          "name": "ArteTV",
+          "popularity": 17
+        },
+        {
+          "name": "Disney",
+          "popularity": 18
+        },
+        {
+          "name": "Mediaset",
+          "popularity": 19
+        },
+        {
+          "name": "Canal+",
+          "popularity": 20
+        },
+        {
+          "name": "SBS",
+          "popularity": 21
+        },
+        {
+          "name": "Globo",
+          "popularity": 22
+        },
+        {
+          "name": "TVer",
+          "popularity": 24
+        },
+        {
+          "name": "10play",
+          "popularity": 25
+        },
+        {
+          "name": "7plus",
+          "popularity": 26
+        },
+        {
+          "name": "9now",
+          "popularity": 27
+        },
+        {
+          "name": "DPlay",
+          "popularity": 28
+        },
+        {
+          "name": "DRTV",
+          "popularity": 29
+        },
+        {
+          "name": "NRK",
+          "popularity": 30
+        },
+        {
+          "name": "SVT",
+          "popularity": 31
+        },
+        {
+          "name": "NPO",
+          "popularity": 32
+        },
+        {
+          "name": "TV2",
+          "popularity": 33
+        },
+        {
+          "name": "TV4",
+          "popularity": 34
+        },
+        {
+          "name": "VRT",
+          "popularity": 35
+        },
+        {
+          "name": "HBO",
+          "popularity": 36
+        },
+        {
+          "name": "DiscoveryPlus",
+          "popularity": 37
+        },
+        {
+          "name": "YleAreena",
+          "popularity": 38
+        },
+        {
+          "name": "TV5MONDE",
+          "popularity": 39
+        },
+        {
+          "name": "1tv",
+          "popularity": 40
+        },
+        {
+          "name": "3sat",
+          "popularity": 41
+        },
+        {
+          "name": "eitb.tv",
+          "popularity": 42
+        },
+        {
+          "name": "RTP",
+          "popularity": 43
+        },
+        {
+          "name": "S4C",
+          "popularity": 44
+        },
+        {
+          "name": "TVC",
+          "popularity": 45
+        },
+        {
+          "name": "TVIPlayer",
+          "popularity": 46
+        },
+        {
+          "name": "Vbox7",
+          "popularity": 47
+        },
+        {
+          "name": "STVPlayer",
+          "popularity": 48
+        },
+        {
+          "name": "Nova",
+          "popularity": 49
+        },
+        {
+          "name": "Tele5",
+          "popularity": 50
+        },
+        {
+          "name": "TelecaribePlay",
+          "popularity": 51
+        },
+        {
+          "name": "Zattoo",
+          "popularity": 53
+        },
+        {
+          "name": "AirTV",
+          "popularity": 54
+        },
+        {
+          "name": "Alsace20TV",
+          "popularity": 55
+        },
+        {
+          "name": "AMCNetworks",
+          "popularity": 56
+        },
+        {
+          "name": "AnimalPlanet",
+          "popularity": 57
+        },
+        {
+          "name": "antenna",
+          "note": "antenna.gr",
+          "popularity": 58
+        },
+        {
+          "name": "arte.sky.it",
+          "popularity": 59
+        },
+        {
+          "name": "ATVAt",
+          "popularity": 60
+        },
+        {
+          "name": "AWAAN",
+          "popularity": 61
+        },
+        {
+          "name": "axs.tv",
+          "popularity": 62
+        },
+        {
+          "name": "AZMedien",
+          "popularity": 63
+        },
+        {
+          "name": "BBVTV",
+          "popularity": 64
+        },
+        {
+          "name": "Bet",
+          "popularity": 65
+        },
+        {
+          "name": "bibeltv",
+          "popularity": 66
+        },
+        {
+          "name": "BravoTV",
+          "popularity": 67
+        },
+        {
+          "name": "BTVPlus",
+          "popularity": 68
+        },
+        {
+          "name": "CanalAlpha",
+          "popularity": 69
+        },
+        {
+          "name": "canalc2.tv",
+          "popularity": 70
+        },
+        {
+          "name": "Canalsurmas",
+          "popularity": 71
+        },
+        {
+          "name": "CCMA",
+          "popularity": 72
+        },
+        {
+          "name": "CDA",
+          "popularity": 73
+        },
+        {
+          "name": "cielotv.it",
+          "popularity": 74
+        },
+        {
+          "name": "ComedyCentral",
+          "popularity": 75
+        },
+        {
+          "name": "DiscoveryLife",
+          "popularity": 76
+        },
+        {
+          "name": "DiscoveryPlusIndia",
+          "popularity": 77
+        },
+        {
+          "name": "DiscoveryPlusItaly",
+          "popularity": 78
+        },
+        {
+          "name": "Duoplay",
+          "popularity": 79
+        },
+        {
+          "name": "EinsUndEinsTV",
+          "popularity": 80
+        },
+        {
+          "name": "ertflix",
+          "popularity": 81
+        },
+        {
+          "name": "ertwebtv",
+          "popularity": 82
+        },
+        {
+          "name": "EttuTv",
+          "popularity": 83
+        },
+        {
+          "name": "EWETV",
+          "popularity": 84
+        },
+        {
+          "name": "FiveTV",
+          "popularity": 85
+        },
+        {
+          "name": "FOX9",
+          "popularity": 86
+        },
+        {
+          "name": "franceinfo",
+          "popularity": 87
+        },
+        {
+          "name": "francetv",
+          "popularity": 88
+        },
+        {
+          "name": "GlattvisionTV",
+          "popularity": 89
+        },
+        {
+          "name": "hgtv.com",
+          "popularity": 90
+        },
+        {
+          "name": "HGTVDe",
+          "popularity": 91
+        },
+        {
+          "name": "HGTVUsa",
+          "popularity": 92
+        },
+        {
+          "name": "hrfernsehen",
+          "popularity": 93
+        },
+        {
+          "name": "HRTi",
+          "popularity": 94
+        },
+        {
+          "name": "IslamChannel",
+          "popularity": 95
+        },
+        {
+          "name": "ivideon",
+          "popularity": 96
+        },
+        {
+          "name": "Izlesene",
+          "popularity": 97
+        },
+        {
+          "name": "Karaoketv",
+          "popularity": 98
+        },
+        {
+          "name": "la7.it",
+          "popularity": 99
+        },
+        {
+          "name": "LaXarxaMes",
+          "popularity": 100
+        },
+        {
+          "name": "Lnk",
+          "popularity": 101
+        },
+        {
+          "name": "LRTRadio",
+          "popularity": 102
+        },
+        {
+          "name": "LRTStream",
+          "popularity": 103
+        },
+        {
+          "name": "LRTVOD",
+          "popularity": 104
+        },
+        {
+          "name": "LSMLREmbed",
+          "popularity": 105
+        },
+        {
+          "name": "LSMLTVEmbed",
+          "popularity": 106
+        },
+        {
+          "name": "LSMReplay",
+          "popularity": 107
+        },
+        {
+          "name": "MaoriTV",
+          "popularity": 108
+        },
+        {
+          "name": "MBN",
+          "popularity": 109
+        },
+        {
+          "name": "MDR",
+          "popularity": 110
+        },
+        {
+          "name": "MediaKlikk",
+          "popularity": 111
+        },
+        {
+          "name": "Medialaan",
+          "popularity": 112
+        },
+        {
+          "name": "megatvcom",
+          "popularity": 113
+        },
+        {
+          "name": "9c9media",
+          "popularity": 114
+        },
+        {
+          "name": "abc.net.au",
+          "popularity": 115
+        },
+        {
+          "name": "abcotvs",
+          "popularity": 116
+        },
+        {
+          "name": "Canal1",
+          "popularity": 118
+        },
+        {
+          "name": "Canalplus",
+          "popularity": 119
+        },
+        {
+          "name": "Crtvg",
+          "popularity": 120
+        },
+        {
+          "name": "DBTV",
+          "popularity": 121
+        },
+        {
+          "name": "DiscoveryNetworksDe",
+          "popularity": 122
+        },
+        {
+          "name": "DRBonanza",
+          "popularity": 123
+        },
+        {
+          "name": "FujiTVFODPlus7",
+          "popularity": 124
+        },
+        {
+          "name": "GMANetworkVideo",
+          "popularity": 125
+        },
+        {
+          "name": "Go",
+          "popularity": 126
+        },
+        {
+          "name": "GoDiscovery",
+          "popularity": 127
+        },
+        {
+          "name": "InvestigationDiscovery",
+          "popularity": 128
+        },
+        {
+          "name": "mtv",
+          "popularity": 129
+        },
+        {
+          "name": "NBCStations",
+          "popularity": 130
+        },
+        {
+          "name": "ndr",
+          "popularity": 131
+        },
+        {
+          "name": "NowCanal",
+          "popularity": 132
+        },
+        {
+          "name": "ntv.ru",
+          "popularity": 133
+        },
+        {
+          "name": "orf",
+          "popularity": 134
+        },
+        {
+          "name": "OsnatelTV",
+          "popularity": 135
+        },
+        {
+          "name": "prosiebensat1",
+          "popularity": 136
+        },
+        {
+          "name": "Puls4",
+          "popularity": 137
+        },
+        {
+          "name": "radiocanada",
+          "popularity": 138
+        },
+        {
+          "name": "RTVCPlay",
+          "popularity": 139
+        },
+        {
+          "name": "SAKTV",
+          "popularity": 140
+        },
+        {
+          "name": "SaltTV",
+          "popularity": 141
+        },
+        {
+          "name": "Servus",
+          "popularity": 142
+        },
+        {
+          "name": "sky.it",
+          "popularity": 143
+        },
+        {
+          "name": "SRGSSR",
+          "popularity": 144
+        },
+        {
+          "name": "stvr",
+          "popularity": 145
+        },
+        {
+          "name": "Syfy",
+          "popularity": 146
+        },
+        {
+          "name": "SYVDK",
+          "popularity": 147
+        },
+        {
+          "name": "TBS",
+          "popularity": 148
+        },
+        {
+          "name": "TBSJP",
+          "popularity": 149
+        },
+        {
+          "name": "TeleBruxelles",
+          "popularity": 150
+        },
+        {
+          "name": "TeleQuebec",
+          "popularity": 151
+        },
+        {
+          "name": "TV2DK",
+          "popularity": 152
+        },
+        {
+          "name": "tv5unis",
+          "popularity": 153
+        },
+        {
+          "name": "tv8.it",
+          "popularity": 154
+        },
+        {
+          "name": "tvaplus",
+          "popularity": 155
+        },
+        {
+          "name": "tvnoe",
+          "popularity": 156
+        },
+        {
+          "name": "TVO",
+          "popularity": 157
+        },
+        {
+          "name": "tvp",
+          "popularity": 158
+        },
+        {
+          "name": "TVPlayer",
+          "popularity": 159
+        },
+        {
+          "name": "TVPlayHome",
+          "popularity": 160
+        },
+        {
+          "name": "Uol",
+          "popularity": 161
+        },
+        {
+          "name": "USANetwork",
+          "popularity": 162
+        },
+        {
+          "name": "VGTV",
+          "popularity": 163
+        },
+        {
+          "name": "VTM",
+          "popularity": 164
+        },
+        {
+          "name": "VTV",
+          "popularity": 165
+        },
+        {
+          "name": "WDR",
+          "popularity": 166
+        },
+        {
+          "name": "aenetworks",
+          "popularity": 167
+        },
+        {
+          "name": "AmHistoryChannel",
+          "popularity": 168
+        },
+        {
+          "name": "anderetijden",
+          "popularity": 169
+        },
+        {
+          "name": "CaracolTvPlay",
+          "popularity": 170
+        },
+        {
+          "name": "CBSLocal",
+          "popularity": 171
+        },
+        {
+          "name": "CookingChannel",
+          "popularity": 172
+        },
+        {
+          "name": "Corus",
+          "popularity": 173
+        },
+        {
+          "name": "cu.ntv.co.jp",
+          "popularity": 174
+        },
+        {
+          "name": "DagelijkseKost",
+          "popularity": 175
+        },
+        {
+          "name": "daystar",
+          "popularity": 176
+        },
+        {
+          "name": "DctpTv",
+          "popularity": 177
+        },
+        {
+          "name": "DestinationAmerica",
+          "popularity": 178
+        },
+        {
+          "name": "FoodNetwork",
+          "popularity": 179
+        },
+        {
+          "name": "history:player",
+          "popularity": 180
+        },
+        {
+          "name": "HSEProduct",
+          "popularity": 181
+        },
+        {
+          "name": "Joj",
+          "popularity": 182
+        },
+        {
+          "name": "JTBC",
+          "popularity": 183
+        },
+        {
+          "name": "Locipo",
+          "popularity": 184
+        },
+        {
+          "name": "MediaWorksNZVOD",
+          "popularity": 185
+        },
+        {
+          "name": "MNetTV",
+          "popularity": 186
+        },
+        {
+          "name": "mtg",
+          "popularity": 187
+        },
+        {
+          "name": "natgeo",
+          "popularity": 188
+        },
+        {
+          "name": "NetPlusTV",
+          "popularity": 190
+        },
+        {
+          "name": "OktoberfestTV",
+          "popularity": 191
+        },
+        {
+          "name": "OutsideTV",
+          "popularity": 192
+        },
+        {
+          "name": "PiramideTV",
+          "popularity": 193
+        },
+        {
+          "name": "PlayPlusTV",
+          "popularity": 194
+        },
+        {
+          "name": "PolsatGo",
+          "popularity": 195
+        },
+        {
+          "name": "QuantumTV",
+          "popularity": 196
+        },
+        {
+          "name": "RheinMainTV",
+          "popularity": 197
+        },
+        {
+          "name": "RTDocumentry",
+          "popularity": 198
+        },
+        {
+          "name": "rte",
+          "popularity": 199
+        },
+        {
+          "name": "rtl.lu",
+          "popularity": 200
+        },
+        {
+          "name": "rtl2",
+          "popularity": 201
+        },
+        {
+          "name": "rtvslo.si",
+          "popularity": 202
+        },
+        {
+          "name": "ScienceChannel",
+          "popularity": 203
+        },
+        {
+          "name": "ScrippsNetworks",
+          "popularity": 204
+        },
+        {
+          "name": "SR",
+          "popularity": 205
+        },
+        {
+          "name": "SztvHu",
+          "popularity": 206
+        },
+        {
+          "name": "startrek",
+          "popularity": 207
+        },
+        {
+          "name": "startv",
+          "popularity": 208
+        },
+        {
+          "name": "Teamcoco",
+          "popularity": 209
+        },
+        {
+          "name": "TheHoleTv",
+          "popularity": 210
+        },
+        {
+          "name": "TheWeatherChannel",
+          "popularity": 211
+        },
+        {
+          "name": "ThisOldHouse",
+          "popularity": 212
+        },
+        {
+          "name": "TLC",
+          "popularity": 213
+        },
+        {
+          "name": "toggle",
+          "popularity": 214
+        },
+        {
+          "name": "tou.tv",
+          "popularity": 215
+        },
+        {
+          "name": "TravelChannel",
+          "popularity": 216
+        },
+        {
+          "name": "tvopengr",
+          "popularity": 217
+        },
+        {
+          "name": "UKTVPlay",
+          "popularity": 218
+        },
+        {
+          "name": "URPlay",
+          "popularity": 219
+        },
+        {
+          "name": "vh1.com",
+          "popularity": 220
+        },
+        {
+          "name": "VTVGo",
+          "popularity": 221
+        },
+        {
+          "name": "wppilot",
+          "popularity": 222
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Dramas, Serials & Premium OTT Platforms",
+      "description": "Dedicated hubs for episodic dramas, soap operas, and streaming series.",
+      "platforms": [
+        {
+          "name": "Hotstar",
+          "popularity": 1
+        },
+        {
+          "name": "BiliBili",
+          "popularity": 2
+        },
+        {
+          "name": "SonyLIV",
+          "popularity": 3
+        },
+        {
+          "name": "Zee5",
+          "popularity": 4
+        },
+        {
+          "name": "iQIYI",
+          "popularity": 5
+        },
+        {
+          "name": "Shahid",
+          "popularity": 7
+        },
+        {
+          "name": "ivi",
+          "note": "Includes compilations",
+          "popularity": 8
+        },
+        {
+          "name": "MangoTV",
+          "popularity": 9
+        },
+        {
+          "name": "TubiTV",
+          "popularity": 10
+        },
+        {
+          "name": "AbemaTV",
+          "popularity": 12
+        },
+        {
+          "name": "AmazonMiniTV",
+          "popularity": 13
+        },
+        {
+          "name": "iflix",
+          "popularity": 14
+        },
+        {
+          "name": "Dropout",
+          "popularity": 15
+        },
+        {
+          "name": "Hiidive",
+          "popularity": 16
+        },
+        {
+          "name": "puhutv",
+          "popularity": 17
+        },
+        {
+          "name": "Weyyak",
+          "popularity": 18
+        },
+        {
+          "name": "StoryFire",
+          "popularity": 19
+        },
+        {
+          "name": "OnDemandKorea",
+          "popularity": 20
+        },
+        {
+          "name": "OnDemandChina",
+          "popularity": 21
+        },
+        {
+          "name": "DangalPlay",
+          "popularity": 22
+        },
+        {
+          "name": "Epicon",
+          "popularity": 23
+        },
+        {
+          "name": "LiTV",
+          "popularity": 24
+        },
+        {
+          "name": "TheChosen",
+          "popularity": 25
+        },
+        {
+          "name": "vqq",
+          "popularity": 26
+        },
+        {
+          "name": "ShemarooMe",
+          "popularity": 27
+        },
+        {
+          "name": "tarangplus",
+          "popularity": 28
+        },
+        {
+          "name": "VVVVID",
+          "popularity": 29
+        },
+        {
+          "name": "Netverse",
+          "popularity": 30
+        },
+        {
+          "name": "Mzaalo",
+          "popularity": 31
+        },
+        {
+          "name": "tv2play.hu",
+          "popularity": 32
+        },
+        {
+          "name": "tvigle",
+          "popularity": 33
+        },
+        {
+          "name": "videomore",
+          "popularity": 34
+        },
+        {
+          "name": "ERRJupiter",
+          "popularity": 35
+        },
+        {
+          "name": "Le",
+          "note": "LeTV",
+          "popularity": 36
+        },
+        {
+          "name": "Viu",
+          "popularity": 37
+        },
+        {
+          "name": "CuriosityStream",
+          "popularity": 38
+        },
+        {
+          "name": "Gaia",
+          "popularity": 39
+        },
+        {
+          "name": "IPrima",
+          "popularity": 40
+        },
+        {
+          "name": "Vidio",
+          "popularity": 41
+        },
+        {
+          "name": "Duboku",
+          "popularity": 42
+        },
+        {
+          "name": "PlanetMarathi",
+          "popularity": 43
+        },
+        {
+          "name": "TrueID",
+          "popularity": 44
+        },
+        {
+          "name": "mewatch",
+          "popularity": 45
+        },
+        {
+          "name": "RCTIPlus",
+          "popularity": 46
+        },
+        {
+          "name": "ParamountPressExpress",
+          "popularity": 47
+        },
+        {
+          "name": "Angel",
+          "popularity": 48
+        },
+        {
+          "name": "fptplay",
+          "popularity": 49
+        },
+        {
+          "name": "MagellanTV",
+          "popularity": 50
+        },
+        {
+          "name": "Mxplayer",
+          "popularity": 51
+        },
+        {
+          "name": "VODPl",
+          "popularity": 52
+        },
+        {
+          "name": "wetv",
+          "popularity": 53
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "News & Journalism",
+      "description": "Major news outlets, regional journalism, and digital newspapers.",
+      "platforms": [
+        {
+          "name": "CNN",
+          "popularity": 1
+        },
+        {
+          "name": "BBC News",
+          "popularity": 2
+        },
+        {
+          "name": "Al Jazeera",
+          "popularity": 3
+        },
+        {
+          "name": "Fox News",
+          "popularity": 4
+        },
+        {
+          "name": "NBC News",
+          "popularity": 5
+        },
+        {
+          "name": "NYTimes",
+          "popularity": 6
+        },
+        {
+          "name": "Bloomberg",
+          "popularity": 7
+        },
+        {
+          "name": "WSJ",
+          "popularity": 8
+        },
+        {
+          "name": "The Guardian",
+          "popularity": 10
+        },
+        {
+          "name": "Washington Post",
+          "popularity": 11
+        },
+        {
+          "name": "CNBC",
+          "popularity": 12
+        },
+        {
+          "name": "abcnews",
+          "popularity": 13
+        },
+        {
+          "name": "cbsnews",
+          "popularity": 14
+        },
+        {
+          "name": "MSN",
+          "popularity": 15
+        },
+        {
+          "name": "Daily Mail",
+          "popularity": 16
+        },
+        {
+          "name": "The Sun",
+          "popularity": 17
+        },
+        {
+          "name": "HuffPost",
+          "popularity": 18
+        },
+        {
+          "name": "9News",
+          "popularity": 21
+        },
+        {
+          "name": "1News",
+          "popularity": 22
+        },
+        {
+          "name": "CGTN",
+          "popularity": 23
+        },
+        {
+          "name": "Bild",
+          "popularity": 25
+        },
+        {
+          "name": "n-tv.de",
+          "popularity": 26
+        },
+        {
+          "name": "bfmtv",
+          "popularity": 27
+        },
+        {
+          "name": "El Pais",
+          "popularity": 28
+        },
+        {
+          "name": "TrtWorld",
+          "popularity": 30
+        },
+        {
+          "name": "DailyWire",
+          "popularity": 31
+        },
+        {
+          "name": "BreitBart",
+          "popularity": 32
+        },
+        {
+          "name": "BusinessInsider",
+          "popularity": 33
+        },
+        {
+          "name": "HollywoodReporter",
+          "popularity": 34
+        },
+        {
+          "name": "TMZ",
+          "popularity": 35
+        },
+        {
+          "name": "Epoch",
+          "popularity": 36
+        },
+        {
+          "name": "democracynow",
+          "popularity": 37
+        },
+        {
+          "name": "Npr",
+          "popularity": 38
+        },
+        {
+          "name": "faz.net",
+          "popularity": 39
+        },
+        {
+          "name": "NOS",
+          "popularity": 40
+        },
+        {
+          "name": "nzherald",
+          "popularity": 41
+        },
+        {
+          "name": "IsraelNationalNews",
+          "popularity": 42
+        },
+        {
+          "name": "ant1newsgr",
+          "popularity": 45
+        },
+        {
+          "name": "BostonGlobe",
+          "popularity": 46
+        },
+        {
+          "name": "CNNIndonesia",
+          "popularity": 47
+        },
+        {
+          "name": "cp24",
+          "popularity": 48
+        },
+        {
+          "name": "CtsNews",
+          "popularity": 49
+        },
+        {
+          "name": "CTVNews",
+          "popularity": 50
+        },
+        {
+          "name": "dw",
+          "popularity": 52
+        },
+        {
+          "name": "Expressen",
+          "popularity": 53
+        },
+        {
+          "name": "GBNews",
+          "popularity": 55
+        },
+        {
+          "name": "LCI",
+          "popularity": 60
+        },
+        {
+          "name": "LeFigaro",
+          "popularity": 61
+        },
+        {
+          "name": "Lemonde",
+          "popularity": 62
+        },
+        {
+          "name": "PressTV",
+          "popularity": 74
+        },
+        {
+          "name": "Ruptly",
+          "popularity": 75
+        },
+        {
+          "name": "USAToday",
+          "popularity": 82
+        },
+        {
+          "name": "RTNews",
+          "popularity": 85
+        },
+        {
+          "name": "Spiegel",
+          "popularity": 86
+        },
+        {
+          "name": "Sky News",
+          "popularity": 87
+        },
+        {
+          "name": "NZZ",
+          "popularity": 88
+        },
+        {
+          "name": "Metacritic",
+          "note": "Media/Video reviews",
+          "popularity": 89
+        },
+        {
+          "name": "24tv.ua",
+          "popularity": 90
+        },
+        {
+          "name": "BioBioChileTV",
+          "popularity": 91
+        },
+        {
+          "name": "DeuxM",
+          "popularity": 92
+        },
+        {
+          "name": "IlPost",
+          "popularity": 93
+        },
+        {
+          "name": "Iltalehti",
+          "popularity": 94
+        },
+        {
+          "name": "Internazionale",
+          "popularity": 95
+        },
+        {
+          "name": "KompasVideo",
+          "popularity": 96
+        },
+        {
+          "name": "Liputan6",
+          "popularity": 97
+        },
+        {
+          "name": "Mediaite",
+          "popularity": 98
+        },
+        {
+          "name": "NewsPicks",
+          "popularity": 99
+        },
+        {
+          "name": "Newsy",
+          "popularity": 100
+        },
+        {
+          "name": "SeznamZpravy",
+          "popularity": 101
+        },
+        {
+          "name": "Tele13",
+          "popularity": 102
+        },
+        {
+          "name": "Telegraaf",
+          "popularity": 103
+        },
+        {
+          "name": "TheStar",
+          "popularity": 104
+        },
+        {
+          "name": "TVANouvelles",
+          "popularity": 105
+        },
+        {
+          "name": "N1Info",
+          "popularity": 106
+        },
+        {
+          "name": "TheIntercept",
+          "popularity": 107
+        },
+        {
+          "name": "Smotrim",
+          "note": "News/Radio/Live",
+          "popularity": 108
+        },
+        {
+          "name": "APA",
+          "popularity": 109
+        },
+        {
+          "name": "DetikEmbed",
+          "popularity": 110
+        },
+        {
+          "name": "dvtv",
+          "popularity": 111
+        },
+        {
+          "name": "FiveThirtyEight",
+          "popularity": 112
+        },
+        {
+          "name": "freespeech.org",
+          "popularity": 113
+        },
+        {
+          "name": "Inc",
+          "popularity": 114
+        },
+        {
+          "name": "life",
+          "popularity": 115
+        },
+        {
+          "name": "maariv.co.il",
+          "popularity": 116
+        },
+        {
+          "name": "mir24.tv",
+          "popularity": 117
+        },
+        {
+          "name": "MirrorCoUK",
+          "popularity": 118
+        },
+        {
+          "name": "Onet",
+          "popularity": 119
+        },
+        {
+          "name": "RCS",
+          "popularity": 120
+        },
+        {
+          "name": "TheHighWire",
+          "popularity": 122
+        },
+        {
+          "name": "TruNews",
+          "popularity": 123
+        },
+        {
+          "name": "Walla",
+          "popularity": 124
+        },
+        {
+          "name": "bt",
+          "popularity": 125
+        },
+        {
+          "name": "GediDigital",
+          "popularity": 126
+        },
+        {
+          "name": "Golem",
+          "popularity": 127
+        },
+        {
+          "name": "Heise",
+          "popularity": 128
+        },
+        {
+          "name": "OnionStudios",
+          "popularity": 129
+        },
+        {
+          "name": "SkyNewsAU",
+          "popularity": 130
+        },
+        {
+          "name": "Tweakers",
+          "popularity": 131
+        },
+        {
+          "name": "UDNEmbed",
+          "popularity": 132
+        },
+        {
+          "name": "VoxMedia",
+          "popularity": 133
+        },
+        {
+          "name": "yahoo",
+          "popularity": 134
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Politics & Government Archives",
+      "description": "Official channels for parliamentary proceedings and public records.",
+      "platforms": [
+        {
+          "name": "CSpan",
+          "popularity": 1
+        },
+        {
+          "name": "UnitedNationsWebTv",
+          "popularity": 2
+        },
+        {
+          "name": "Senate.gov",
+          "popularity": 3
+        },
+        {
+          "name": "Bundestag",
+          "popularity": 4
+        },
+        {
+          "name": "parliamentlive.tv",
+          "popularity": 5
+        },
+        {
+          "name": "Parlview",
+          "popularity": 6
+        },
+        {
+          "name": "EuroParlWebstream",
+          "popularity": 7
+        },
+        {
+          "name": "Folketinget",
+          "popularity": 8
+        },
+        {
+          "name": "sejm",
+          "popularity": 9
+        },
+        {
+          "name": "cpac",
+          "popularity": 10
+        },
+        {
+          "name": "Bpb",
+          "note": "Federal Agency for Civic Education",
+          "popularity": 11
+        },
+        {
+          "name": "Sangiin",
+          "popularity": 12
+        },
+        {
+          "name": "ShugiinItv",
+          "popularity": 13
+        },
+        {
+          "name": "agalega",
+          "popularity": 14
+        },
+        {
+          "name": "Phoenix.de",
+          "popularity": 15
+        },
+        {
+          "name": "TVW",
+          "popularity": 16
+        },
+        {
+          "name": "Wyborcza",
+          "popularity": 17
+        },
+        {
+          "name": "RadioRadicale",
+          "popularity": 18
+        },
+        {
+          "name": "Kommunetv",
+          "popularity": 19
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Cartoons, Anime & Kids Content",
+      "description": "Animation hubs for fans of all ages and children's programming networks.",
+      "platforms": [
+        {
+          "name": "South Park",
+          "popularity": 1
+        },
+        {
+          "name": "AdultSwim",
+          "popularity": 2
+        },
+        {
+          "name": "PBSKids",
+          "popularity": 3
+        },
+        {
+          "name": "Nick.com",
+          "popularity": 4
+        },
+        {
+          "name": "AcFun",
+          "popularity": 5
+        },
+        {
+          "name": "ADN",
+          "note": "Animation Digital Network",
+          "popularity": 6
+        },
+        {
+          "name": "Kika",
+          "popularity": 7
+        },
+        {
+          "name": "NhkForSchool",
+          "popularity": 8
+        },
+        {
+          "name": "BrainPOP",
+          "note": "Includes BrainPOPELL",
+          "popularity": 9
+        },
+        {
+          "name": "Toggo",
+          "popularity": 10
+        },
+        {
+          "name": "ToonGoggles",
+          "popularity": 11
+        },
+        {
+          "name": "TrtCocuk",
+          "popularity": 12
+        },
+        {
+          "name": "AcFunBangumi",
+          "popularity": 13
+        },
+        {
+          "name": "Funk",
+          "popularity": 14
+        },
+        {
+          "name": "LEGO",
+          "popularity": 15
+        },
+        {
+          "name": "NekoHacker",
+          "popularity": 16
+        },
+        {
+          "name": "SovietsCloset",
+          "popularity": 17
+        },
+        {
+          "name": "Zapp",
+          "note": "NPO Kids",
+          "popularity": 18
+        },
+        {
+          "name": "hetklokhuis",
+          "popularity": 19
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Education, Learning & Professional Tools",
+      "description": "Consolidated academic lectures, professional development courses, and enterprise video frameworks.",
+      "platforms": [
+        {
+          "name": "Udemy",
+          "popularity": 1
+        },
+        {
+          "name": "Khan Academy",
+          "popularity": 2
+        },
+        {
+          "name": "LinkedIn Learning",
+          "note": "formerly Lynda",
+          "popularity": 3
+        },
+        {
+          "name": "Pluralsight",
+          "popularity": 4
+        },
+        {
+          "name": "MIT OCW",
+          "note": "OpenCourseWare",
+          "popularity": 6
+        },
+        {
+          "name": "TED",
+          "popularity": 7
+        },
+        {
+          "name": "Stanford OC",
+          "note": "Open ClassRoom",
+          "popularity": 8
+        },
+        {
+          "name": "Platzi",
+          "popularity": 9
+        },
+        {
+          "name": "Egghead",
+          "popularity": 10
+        },
+        {
+          "name": "FrontendMasters",
+          "popularity": 11
+        },
+        {
+          "name": "Laracasts",
+          "popularity": 12
+        },
+        {
+          "name": "AcademicEarth",
+          "popularity": 13
+        },
+        {
+          "name": "AdobeConnect",
+          "popularity": 14
+        },
+        {
+          "name": "Alura",
+          "popularity": 15
+        },
+        {
+          "name": "Brilliantpala",
+          "popularity": 16
+        },
+        {
+          "name": "Camdemy",
+          "popularity": 17
+        },
+        {
+          "name": "CiscoLive",
+          "popularity": 18
+        },
+        {
+          "name": "Cybrary",
+          "popularity": 19
+        },
+        {
+          "name": "GameDevTV",
+          "popularity": 20
+        },
+        {
+          "name": "GetCourseRu",
+          "popularity": 21
+        },
+        {
+          "name": "hketv",
+          "popularity": 22
+        },
+        {
+          "name": "InfoQ",
+          "popularity": 23
+        },
+        {
+          "name": "ITProTV",
+          "popularity": 24
+        },
+        {
+          "name": "Jove",
+          "popularity": 25
+        },
+        {
+          "name": "Lecturio",
+          "popularity": 26
+        },
+        {
+          "name": "Lumni",
+          "popularity": 27
+        },
+        {
+          "name": "Microsoft Learn",
+          "popularity": 28
+        },
+        {
+          "name": "NRK Skole",
+          "popularity": 29
+        },
+        {
+          "name": "PacktPub",
+          "popularity": 30
+        },
+        {
+          "name": "RayWenderlich",
+          "popularity": 31
+        },
+        {
+          "name": "RbgTum",
+          "popularity": 32
+        },
+        {
+          "name": "Safari",
+          "note": "O'Reilly",
+          "popularity": 33
+        },
+        {
+          "name": "SchoolTV",
+          "popularity": 34
+        },
+        {
+          "name": "TubeTuGraz",
+          "popularity": 35
+        },
+        {
+          "name": "Unistra",
+          "popularity": 36
+        },
+        {
+          "name": "VideoKen",
+          "popularity": 37
+        },
+        {
+          "name": "nebula",
+          "note": "watchnebula.com",
+          "popularity": 38
+        },
+        {
+          "name": "zoom",
+          "popularity": 39
+        },
+        {
+          "name": "MicrosoftBuild",
+          "popularity": 40
+        },
+        {
+          "name": "media.ccc.de",
+          "popularity": 41
+        },
+        {
+          "name": "Screencastify",
+          "popularity": 42
+        },
+        {
+          "name": "Slideshare",
+          "popularity": 43
+        },
+        {
+          "name": "SharePoint",
+          "popularity": 44
+        },
+        {
+          "name": "BlackboardCollaborate",
+          "popularity": 45
+        },
+        {
+          "name": "adobetv",
+          "popularity": 46
+        },
+        {
+          "name": "ciscowebex",
+          "popularity": 47
+        },
+        {
+          "name": "TeamTreeHouse",
+          "popularity": 48
+        },
+        {
+          "name": "Vidyard",
+          "popularity": 49
+        },
+        {
+          "name": "Opencast",
+          "popularity": 50
+        },
+        {
+          "name": "BerufeTV",
+          "popularity": 51
+        },
+        {
+          "name": "FrancaisFacile",
+          "popularity": 52
+        },
+        {
+          "name": "Germanupa",
+          "popularity": 53
+        },
+        {
+          "name": "LearningOnScreen",
+          "popularity": 54
+        },
+        {
+          "name": "Pyvideo",
+          "popularity": 55
+        },
+        {
+          "name": "techtv.mit.edu",
+          "popularity": 56
+        },
+        {
+          "name": "Viidea",
+          "popularity": 57
+        },
+        {
+          "name": "ZetlandDKArticle",
+          "popularity": 58
+        },
+        {
+          "name": "DrTalks",
+          "popularity": 59
+        },
+        {
+          "name": "KTH",
+          "popularity": 60
+        },
+        {
+          "name": "AtScaleConfEvent",
+          "popularity": 61
+        },
+        {
+          "name": "Craftsy",
+          "popularity": 62
+        },
+        {
+          "name": "GPUTechConf",
+          "popularity": 63
+        },
+        {
+          "name": "SlidesLive",
+          "popularity": 64
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Sports, Racing & Fitness",
+      "description": "Global sports leagues, competitive racing, and sports journalism archives.",
+      "platforms": [
+        {
+          "name": "ESPN",
+          "popularity": 1
+        },
+        {
+          "name": "NFL",
+          "popularity": 2
+        },
+        {
+          "name": "MLB",
+          "popularity": 3
+        },
+        {
+          "name": "NHL",
+          "popularity": 4
+        },
+        {
+          "name": "Fifa",
+          "popularity": 5
+        },
+        {
+          "name": "Formula1",
+          "popularity": 6
+        },
+        {
+          "name": "WWE",
+          "popularity": 7
+        },
+        {
+          "name": "Sky Sports",
+          "popularity": 8
+        },
+        {
+          "name": "Fox Sports",
+          "popularity": 9
+        },
+        {
+          "name": "Peloton",
+          "popularity": 10
+        },
+        {
+          "name": "UFCArabia",
+          "popularity": 11
+        },
+        {
+          "name": "RedBull",
+          "popularity": 12
+        },
+        {
+          "name": "Eurosport",
+          "popularity": 13
+        },
+        {
+          "name": "Bundesliga",
+          "popularity": 14
+        },
+        {
+          "name": "EuropeanTour",
+          "popularity": 15
+        },
+        {
+          "name": "FootyRoom",
+          "popularity": 16
+        },
+        {
+          "name": "PGATour",
+          "popularity": 17
+        },
+        {
+          "name": "TennisTV",
+          "popularity": 18
+        },
+        {
+          "name": "Wimbledon",
+          "popularity": 19
+        },
+        {
+          "name": "Masters",
+          "popularity": 20
+        },
+        {
+          "name": "MatchTV",
+          "popularity": 21
+        },
+        {
+          "name": "MLSSoccer",
+          "popularity": 22
+        },
+        {
+          "name": "NascarClassics",
+          "popularity": 23
+        },
+        {
+          "name": "OneFootball",
+          "popularity": 24
+        },
+        {
+          "name": "OlympicsReplay",
+          "popularity": 25
+        },
+        {
+          "name": "Kicker",
+          "popularity": 26
+        },
+        {
+          "name": "PremiershipRugby",
+          "popularity": 27
+        },
+        {
+          "name": "QDance",
+          "popularity": 28
+        },
+        {
+          "name": "Sport5",
+          "popularity": 29
+        },
+        {
+          "name": "SportEurope",
+          "popularity": 30
+        },
+        {
+          "name": "TV DFB",
+          "popularity": 31
+        },
+        {
+          "name": "WrestleUniverse",
+          "popularity": 32
+        },
+        {
+          "name": "WinSportsVideo",
+          "popularity": 33
+        },
+        {
+          "name": "Pinkbike",
+          "popularity": 34
+        },
+        {
+          "name": "PokerGo",
+          "popularity": 35
+        },
+        {
+          "name": "Gaskrank",
+          "popularity": 36
+        },
+        {
+          "name": "NFHSNetwork",
+          "popularity": 37
+        },
+        {
+          "name": "StretchInternet",
+          "popularity": 38
+        },
+        {
+          "name": "Volejtv",
+          "popularity": 39
+        },
+        {
+          "name": "ESPNCricInfo",
+          "popularity": 40
+        },
+        {
+          "name": "Fczenit",
+          "popularity": 41
+        },
+        {
+          "name": "WatchESPN",
+          "popularity": 42
+        },
+        {
+          "name": "filmon",
+          "note": "Includes Sports/TV live",
+          "popularity": 43
+        },
+        {
+          "name": "Graspop",
+          "popularity": 44
+        },
+        {
+          "name": "Zapiks",
+          "popularity": 45
+        },
+        {
+          "name": "MatchiTV",
+          "popularity": 46
+        },
+        {
+          "name": "nbcolympics",
+          "popularity": 47
+        },
+        {
+          "name": "PerformGroup",
+          "popularity": 48
+        },
+        {
+          "name": "GameSpot",
+          "popularity": 49
+        },
+        {
+          "name": "GameStar",
+          "popularity": 50
+        },
+        {
+          "name": "UFCTV",
+          "popularity": 51
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Gaming & Live Portals",
+      "description": "Live streaming hubs, gaming communities, and esports platforms.",
+      "platforms": [
+        {
+          "name": "AfreecaTV",
+          "note": "Soop",
+          "popularity": 4
+        },
+        {
+          "name": "IGN",
+          "popularity": 5
+        },
+        {
+          "name": "GiantBomb",
+          "popularity": 14
+        },
+        {
+          "name": "Gronkh",
+          "popularity": 18
+        },
+        {
+          "name": "MedalTV",
+          "popularity": 20
+        },
+        {
+          "name": "XboxClips",
+          "popularity": 26
+        },
+        {
+          "name": "Steam",
+          "popularity": 29
+        },
+        {
+          "name": "BiliLive",
+          "popularity": 30
+        },
+        {
+          "name": "Stacommu",
+          "popularity": 36
+        },
+        {
+          "name": "whowatch",
+          "popularity": 38
+        },
+        {
+          "name": "Zaiko",
+          "popularity": 39
+        },
+        {
+          "name": "NerdCubedFeed",
+          "popularity": 42
+        },
+        {
+          "name": "vrsquare",
+          "popularity": 44
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Adult Content",
+      "description": "Mature content platforms and adult community sites.",
+      "platforms": [
+        {
+          "name": "PornHub",
+          "popularity": 1
+        },
+        {
+          "name": "XVideos",
+          "popularity": 2
+        },
+        {
+          "name": "XNXX",
+          "popularity": 3
+        },
+        {
+          "name": "XHamster",
+          "popularity": 4
+        },
+        {
+          "name": "YouPorn",
+          "popularity": 5
+        },
+        {
+          "name": "RedTube",
+          "popularity": 6
+        },
+        {
+          "name": "Chaturbate",
+          "popularity": 7
+        },
+        {
+          "name": "Beeg",
+          "popularity": 8
+        },
+        {
+          "name": "SpankBang",
+          "popularity": 9
+        },
+        {
+          "name": "Stripchat",
+          "popularity": 10
+        },
+        {
+          "name": "4tube",
+          "popularity": 11
+        },
+        {
+          "name": "BongaCams",
+          "popularity": 12
+        },
+        {
+          "name": "Cam4",
+          "popularity": 13
+        },
+        {
+          "name": "CamModels",
+          "popularity": 14
+        },
+        {
+          "name": "Camsoda",
+          "popularity": 15
+        },
+        {
+          "name": "DrTuber",
+          "popularity": 16
+        },
+        {
+          "name": "EMPFlix",
+          "popularity": 17
+        },
+        {
+          "name": "Eporner",
+          "popularity": 18
+        },
+        {
+          "name": "Erocast",
+          "popularity": 19
+        },
+        {
+          "name": "EroProfile",
+          "popularity": 20
+        },
+        {
+          "name": "Fux",
+          "popularity": 21
+        },
+        {
+          "name": "Goshgay",
+          "popularity": 22
+        },
+        {
+          "name": "HellPorno",
+          "popularity": 23
+        },
+        {
+          "name": "Iwara",
+          "popularity": 24
+        },
+        {
+          "name": "LoveHomePorn",
+          "popularity": 25
+        },
+        {
+          "name": "ManyVids",
+          "popularity": 26
+        },
+        {
+          "name": "Motherless",
+          "popularity": 27
+        },
+        {
+          "name": "MovieFap",
+          "popularity": 28
+        },
+        {
+          "name": "Murrtube",
+          "popularity": 29
+        },
+        {
+          "name": "NonkTube",
+          "popularity": 30
+        },
+        {
+          "name": "NoodleMagazine",
+          "popularity": 31
+        },
+        {
+          "name": "NubilesPorn",
+          "popularity": 32
+        },
+        {
+          "name": "Nuvid",
+          "popularity": 33
+        },
+        {
+          "name": "PeekVids",
+          "popularity": 34
+        },
+        {
+          "name": "PlayVids",
+          "popularity": 35
+        },
+        {
+          "name": "Pornbox",
+          "popularity": 36
+        },
+        {
+          "name": "PornerBros",
+          "popularity": 37
+        },
+        {
+          "name": "PornFlip",
+          "popularity": 38
+        },
+        {
+          "name": "Pornotube",
+          "popularity": 39
+        },
+        {
+          "name": "PornTop",
+          "popularity": 40
+        },
+        {
+          "name": "PornTube",
+          "popularity": 41
+        },
+        {
+          "name": "RedGifs",
+          "popularity": 42
+        },
+        {
+          "name": "Rule34Video",
+          "popularity": 43
+        },
+        {
+          "name": "Slutload",
+          "popularity": 44
+        },
+        {
+          "name": "SunPorno",
+          "popularity": 45
+        },
+        {
+          "name": "ThisVid",
+          "popularity": 46
+        },
+        {
+          "name": "TNAFlix",
+          "popularity": 47
+        },
+        {
+          "name": "Txxx",
+          "popularity": 48
+        },
+        {
+          "name": "XXXYMovies",
+          "popularity": 49
+        },
+        {
+          "name": "YouJizz",
+          "popularity": 50
+        },
+        {
+          "name": "ZenPorn",
+          "popularity": 51
+        },
+        {
+          "name": "AlphaPorno",
+          "popularity": 52
+        },
+        {
+          "name": "OfTV",
+          "popularity": 53
+        },
+        {
+          "name": "Pr0gramm",
+          "popularity": 54
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Lifestyle, Cooking & Regional Specialties",
+      "description": "Consolidated culinary arts, DIY, travel, and major regional portals for entertainment and social video.",
+      "platforms": [
+        {
+          "name": "Biography",
+          "popularity": 4
+        },
+        {
+          "name": "AmericasTestKitchen",
+          "popularity": 5
+        },
+        {
+          "name": "SoftWhiteUnderbelly",
+          "popularity": 7
+        },
+        {
+          "name": "Zhihu",
+          "popularity": 13
+        },
+        {
+          "name": "AitubeKZ",
+          "popularity": 26
+        },
+        {
+          "name": "Daum",
+          "note": "Major Korean portal/video",
+          "popularity": 28
+        },
+        {
+          "name": "NhkRadiru",
+          "note": "NHK Radio",
+          "popularity": 29
+        },
+        {
+          "name": "Sohu",
+          "note": "Chinese entertainment portal",
+          "popularity": 32
+        },
+        {
+          "name": "Hytale",
+          "note": "Community/Media blog",
+          "popularity": 35
+        },
+        {
+          "name": "Caltrans",
+          "popularity": 36
+        },
+        {
+          "name": "GodResource",
+          "popularity": 39
+        },
+        {
+          "name": "GoPro",
+          "popularity": 40
+        },
+        {
+          "name": "Kenh14Video",
+          "popularity": 41
+        },
+        {
+          "name": "YappyProfile",
+          "popularity": 45
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "E-Commerce, Shopping & Commercials",
+      "description": "Commercial marketplaces, product review hubs, and live shopping channels.",
+      "platforms": [
+        {
+          "name": "Amazon",
+          "note": "Reviews & Store",
+          "popularity": 1
+        },
+        {
+          "name": "AliExpress",
+          "popularity": 2
+        },
+        {
+          "name": "Ebay",
+          "popularity": 4
+        },
+        {
+          "name": "Groupon",
+          "popularity": 5
+        },
+        {
+          "name": "HSE",
+          "note": "Product & Shows",
+          "popularity": 6
+        },
+        {
+          "name": "WimTV",
+          "popularity": 23
+        },
+        {
+          "name": "KickStarter",
+          "popularity": 62
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Arts, Culture & History Archives",
+      "description": "Consolidated digital archives, museum repositories, and historical performance platforms.",
+      "platforms": [
+        {
+          "name": "Archive.org",
+          "popularity": 1
+        },
+        {
+          "name": "Library of Congress",
+          "note": "loc",
+          "popularity": 2
+        },
+        {
+          "name": "ERRArhiiv",
+          "popularity": 2
+        },
+        {
+          "name": "NobelPrize",
+          "popularity": 3
+        },
+        {
+          "name": "MuseAI",
+          "popularity": 8
+        },
+        {
+          "name": "Ina",
+          "popularity": 9
+        },
+        {
+          "name": "HistoricFilms",
+          "popularity": 10
+        },
+        {
+          "name": "WebOfStories",
+          "popularity": 11
+        },
+        {
+          "name": "AeonCo",
+          "note": "Science/Culture films",
+          "popularity": 13
+        },
+        {
+          "name": "CharlieRose",
+          "note": "Historical interview archives",
+          "popularity": 14
+        },
+        {
+          "name": "EUScreen",
+          "note": "European cultural heritage",
+          "popularity": 16
+        },
+        {
+          "name": "Harpodeon",
+          "note": "Historic film archive",
+          "popularity": 18
+        },
+        {
+          "name": "NZOnScreen",
+          "note": "New Zealand digital culture",
+          "popularity": 19
+        },
+        {
+          "name": "Wikimedia",
+          "note": "Global media repository",
+          "popularity": 20
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Science, Technology & System Extractors",
+      "description": "Consolidated technical journals, enterprise video frameworks, and the generic engines supporting unlisted sites.",
+      "platforms": [
+        {
+          "name": "NationalGeographic",
+          "popularity": 1
+        },
+        {
+          "name": "Wired",
+          "note": "via CondeNast",
+          "popularity": 2
+        },
+        {
+          "name": "Brightcove",
+          "popularity": 2
+        },
+        {
+          "name": "Digiteka",
+          "popularity": 2
+        },
+        {
+          "name": "Ars Technica",
+          "note": "via CondeNast",
+          "popularity": 3
+        },
+        {
+          "name": "Kaltura",
+          "popularity": 3
+        },
+        {
+          "name": "Digiview",
+          "popularity": 3
+        },
+        {
+          "name": "JWPlatform",
+          "popularity": 4
+        },
+        {
+          "name": "Wistia",
+          "popularity": 5
+        },
+        {
+          "name": "ElementorEmbed",
+          "popularity": 5
+        },
+        {
+          "name": "ThePlatform",
+          "popularity": 6
+        },
+        {
+          "name": "Embedly",
+          "popularity": 6
+        },
+        {
+          "name": "MicrosoftStream",
+          "popularity": 7
+        },
+        {
+          "name": "CloudflareStream",
+          "popularity": 8
+        },
+        {
+          "name": "Fathom",
+          "popularity": 8
+        },
+        {
+          "name": "Panopto",
+          "popularity": 9
+        },
+        {
+          "name": "Anvato",
+          "popularity": 10
+        },
+        {
+          "name": "BunnyCdn",
+          "popularity": 11
+        },
+        {
+          "name": "Mux",
+          "popularity": 12
+        },
+        {
+          "name": "GoToStage",
+          "popularity": 12
+        },
+        {
+          "name": "BokeCC",
+          "note": "Enterprise video platform",
+          "popularity": 14
+        },
+        {
+          "name": "BoxCast",
+          "note": "Enterprise live streaming",
+          "popularity": 15
+        },
+        {
+          "name": "Dacast",
+          "note": "Online video hosting",
+          "popularity": 16
+        },
+        {
+          "name": "Icareus",
+          "note": "Cloud video solution",
+          "popularity": 17
+        },
+        {
+          "name": "MainStreaming",
+          "note": "Edge video delivery",
+          "popularity": 18
+        },
+        {
+          "name": "Mediasite",
+          "note": "Enterprise video framework",
+          "popularity": 19
+        },
+        {
+          "name": "MediaStream",
+          "note": "Streaming tech service",
+          "popularity": 20
+        },
+        {
+          "name": "Nexx",
+          "note": "Omnichannel video platform",
+          "popularity": 21
+        },
+        {
+          "name": "Piksel",
+          "note": "Video technology systems",
+          "popularity": 22
+        },
+        {
+          "name": "Playwire",
+          "note": "Digital media ad-tech video",
+          "popularity": 23
+        },
+        {
+          "name": "Screen9",
+          "note": "Online video solutions",
+          "popularity": 24
+        },
+        {
+          "name": "SproutVideo",
+          "note": "Business video hosting",
+          "popularity": 25
+        },
+        {
+          "name": "UlizaPlayer",
+          "note": "Video solution engine",
+          "popularity": 26
+        },
+        {
+          "name": "uStudio",
+          "note": "Enterprise media system",
+          "popularity": 27
+        },
+        {
+          "name": "ViewLift",
+          "note": "OTT system provider",
+          "popularity": 28
+        },
+        {
+          "name": "ViMP",
+          "note": "Enterprise video framework",
+          "popularity": 29
+        },
+        {
+          "name": "Viously",
+          "note": "Video delivery platform",
+          "popularity": 30
+        },
+        {
+          "name": "Zype",
+          "note": "Infrastructure for video",
+          "popularity": 31
+        },
+        {
+          "name": "3qsdn",
+          "popularity": 32
+        },
+        {
+          "name": "ArcPublishing",
+          "popularity": 33
+        },
+        {
+          "name": "Bitmovin",
+          "popularity": 35
+        },
+        {
+          "name": "CamtasiaEmbed",
+          "popularity": 36
+        },
+        {
+          "name": "Cellebrite",
+          "popularity": 37
+        },
+        {
+          "name": "CloudyCDN",
+          "popularity": 39
+        },
+        {
+          "name": "CondeNast",
+          "popularity": 40
+        },
+        {
+          "name": "EyedoTV",
+          "popularity": 41
+        },
+        {
+          "name": "glomex",
+          "popularity": 42
+        },
+        {
+          "name": "html5",
+          "popularity": 43
+        },
+        {
+          "name": "IVXPlayer",
+          "popularity": 44
+        },
+        {
+          "name": "JStream",
+          "popularity": 45
+        },
+        {
+          "name": "MicrosoftEmbed",
+          "popularity": 46
+        },
+        {
+          "name": "MicrosoftMedius",
+          "popularity": 47
+        },
+        {
+          "name": "Minoto",
+          "popularity": 48
+        },
+        {
+          "name": "Nest",
+          "popularity": 49
+        },
+        {
+          "name": "NetAppVideo",
+          "popularity": 50
+        },
+        {
+          "name": "on24",
+          "popularity": 51
+        },
+        {
+          "name": "PlyrEmbed",
+          "popularity": 52
+        },
+        {
+          "name": "ScreenRec",
+          "popularity": 53
+        },
+        {
+          "name": "uplynk",
+          "popularity": 54
+        },
+        {
+          "name": "Vidflex",
+          "popularity": 56
+        },
+        {
+          "name": "Vidly",
+          "popularity": 57
+        },
+        {
+          "name": "vids.io",
+          "popularity": 58
+        },
+        {
+          "name": "VODPlatform",
+          "popularity": 59
+        },
+        {
+          "name": "Xstream",
+          "popularity": 60
+        },
+        {
+          "name": "BoxCastVideo",
+          "popularity": 61
+        },
+        {
+          "name": "VideoPress",
+          "popularity": 62
+        }
+      ]
+    }
+  ]
+}
