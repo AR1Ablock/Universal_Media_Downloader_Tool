@@ -3,13 +3,14 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using Downloader_Backend.Model;
 using Microsoft.AspNetCore.Mvc;
+using My_Files = System.IO.File;
 
 namespace Downloader_Backend.Logic
 {
 
     [ApiController]
     [Route("[controller]")]
-    public partial class DownloaderController(DownloadTracker tracker, ILogger<DownloaderController> logger, IDownloadPersistence download_history, ProcessControl processControl, Utility utility, GlobalCancellationService globalCancellation) : ControllerBase
+    public partial class DownloaderController(DownloadTracker tracker, ILogger<DownloaderController> logger, IDownloadPersistence download_history, ProcessControl processControl, Utility utility, GlobalCancellationService globalCancellation, File_Saver file_Saver) : ControllerBase
     {
         private readonly DownloadTracker _tracker = tracker;
         private readonly ILogger<DownloaderController> _logger = logger;
@@ -17,6 +18,7 @@ namespace Downloader_Backend.Logic
         private readonly Utility _utility = utility;
         private readonly ProcessControl _processControl = processControl;
         private readonly IDownloadPersistence _download_history = download_history;
+        private readonly File_Saver _fileSaver = file_Saver;
         private readonly bool Download_Enable = false; // used for prodction build if app is hosted on a server.
 
 
@@ -25,6 +27,7 @@ namespace Downloader_Backend.Logic
         {
             var Token_Key = _globalCancellation.GenerateKey();
             var Token_Source = _globalCancellation.CreateTokenSource(Token_Key);
+            var token = Token_Source.Token;
 
             try
             {
@@ -35,9 +38,9 @@ namespace Downloader_Backend.Logic
                     return BadRequest("Invalid URL provided.");
                 }
 
-                string[] basicArgs = ["-j", url];
+                string[] basicArgs = ["-J", "--no-playlist", url];
 
-                var (success, output, error, loginRequired) = await _utility.TryRunYtDlpAsync(basicArgs, Token_Source.Token);
+                var (success, output, error, loginRequired) = await _utility.TryRunYtDlpAsync(basicArgs, token);
 
                 if (!success)
                 {
@@ -55,8 +58,8 @@ namespace Downloader_Backend.Logic
                 string extractor = root.GetProperty("extractor_key").GetString()?.ToLower() ?? "";
 
                 List<Format> formats = extractor.Contains("facebook")
-                    ? _utility.ParseFacebookFormats(root)
-                    : _utility.ParseStandardFormats(root);
+                    ? await _utility.ParseFacebookFormats(root, req.Url, token)
+                    : await _utility.ParseStandardFormats(root, req.Url, token);
 
                 return Ok(formats);
             }
@@ -88,16 +91,32 @@ namespace Downloader_Backend.Logic
                         return BadRequest("Invalid URL provided.");
 
                     // now pass the token into GetTitle
-                    string rawTitle;
+                    string rawTitle = "";
                     try
                     {
-                        rawTitle = await _utility.GetTitle(url, Token_Source.Token)
-                        ?? req.DownloadId;     // if null (due to cancel), fallback
+                        if (!string.IsNullOrWhiteSpace(_fileSaver.File_Path))
+                        {
+                            if (My_Files.Exists(_fileSaver.File_Path))
+                            {
+                                string res = My_Files.ReadAllText(_fileSaver.File_Path);
+                                if (!string.IsNullOrWhiteSpace(res))
+                                {
+                                    rawTitle = res;
+                                }
+                            }
+                        }
+
+                        if (string.IsNullOrWhiteSpace(rawTitle))
+                        rawTitle = await _utility.GetTitle(url, Token_Source.Token) ?? req.DownloadId;
                     }
                     catch (OperationCanceledException)
                     {
                         // client gave up before we even started downloading
                         return StatusCode(499, "Client cancelled before download could start.");
+                    }
+                    catch (Exception ex)
+                    {
+                        return BadRequest(ex.Message);
                     }
 
                     // sanitize for filesystem
@@ -115,7 +134,7 @@ namespace Downloader_Backend.Logic
                         TokenSource = Token_Source,
                     };
                     // await _download_history.Save_And_UpdateJobAsync(job); // save initial job state
-                    var result = await _utility.DownloadAsync(job, _globalCancellation, _download_history, _tracker, Token_Source.Token, false, false, false, false, Token_Key);
+                    var result = await _utility.DownloadAsync(job, Token_Source.Token, _globalCancellation, _download_history, _tracker, false, false, false, false, Token_Key);
                     return result;
                 }, Token_Source.Token);
 
@@ -305,7 +324,7 @@ namespace Downloader_Backend.Logic
 
             // 4) Kick off a fresh download
             //    restart=true will *not* pass --continue, so yt-dlp starts from scratch
-            return await _utility.DownloadAsync(job, _globalCancellation, _download_history, _tracker, Token_Source.Token ,resume: false, restart: true, false, false, Token_Key);
+            return await _utility.DownloadAsync(job, Token_Source.Token, _globalCancellation, _download_history, _tracker, resume: false, restart: true, false, false, Token_Key);
         }
 
 
@@ -330,7 +349,7 @@ namespace Downloader_Backend.Logic
                 oldJob.TokenSource = Token_Source;
 
                 await Task.Delay(100, Token_Source.Token);
-                return await _utility.DownloadAsync(oldJob, _globalCancellation, _download_history, _tracker, Token_Source.Token, resume: true, false, false, false, Token_Key);
+                return await _utility.DownloadAsync(oldJob, Token_Source.Token, _globalCancellation, _download_history, _tracker, resume: true, false, false, false, Token_Key);
             }
 
             return NotFound("Item not found.");

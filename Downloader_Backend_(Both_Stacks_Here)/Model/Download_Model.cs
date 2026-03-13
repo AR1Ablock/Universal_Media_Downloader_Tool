@@ -68,6 +68,11 @@ namespace Downloader_Backend.Model
         public ConcurrentDictionary<string, DownloadJob> Jobs { get; } = new();
     }
 
+    public class File_Saver
+    {
+        public string File_Path { get; set;} = "";
+    }
+
 
     public class GlobalCancellationService
     {

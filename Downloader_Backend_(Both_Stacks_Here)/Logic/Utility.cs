@@ -9,29 +9,27 @@ using Spectre.Console;
 
 namespace Downloader_Backend.Logic
 {
-    public partial class Utility(ILogger<Utility> logger, ProcessControl processControl)
+    public partial class Utility(ILogger<Utility> logger, ProcessControl processControl, File_Saver file_Saver)
     {
 
         private readonly ProcessControl _processControl = processControl;
         private readonly ILogger<Utility> _logger = logger;
+        private readonly File_Saver _fileSaver = file_Saver;
 
-        private sealed record DownloadStrategy(bool UseCookies, bool UseImpersonate, string Name);
-
-        public readonly string[] CookieTriggers = ["cookies", "login", "429", "too many requests", "rate limit", "sabr", "sign in", "log in", "authentication required"];
-
-        public readonly string[] ImpersonateTriggers = ["Cloudflare anti-bot challenge", "Got HTTP Error 403 caused by Cloudflare", "generic:impersonate", "anti-bot challenge", "attention required!", "checking your browser", "just a moment", "cf-ray", "Ray ID"];
-
-        public readonly string[] PermanentErrorTriggers = ["video unavailable", "this video is unavailable", "private video", "private playlist", "this video is private", "sign in to view", "login required to view", "copyright", "copyrighted content", "removed by the uploader", "geo restricted", "geoblocked", "not available in your country", "not available in your region", "this content is not available", "age restricted", "age-restricted", "age gate"];
-
-        public enum YtDlpStrategy
+        private static readonly HashSet<string> KnownAudioExtensions = new(StringComparer.OrdinalIgnoreCase)
         {
-            Normal,
-            CookiesOnly,
-            ImpersonateOnly,
-            CookiesAndImpersonate
-        }
-
-
+        // Core ones (YouTube, most sites)
+        "mp3", "m4a", "opus", "ogg", "wav", "flac", "aac", "mpga", "weba", "mka",
+    
+        // Wikipedia + generic/HTML5MediaEmbed + DASH audio
+        "webm", "oga",
+    
+        // Rare but real yt-dlp outputs on other sites
+        "mp4", "3gp", "m4b",
+        "aiff", "aif", "caf",
+        "spx", "tta",
+        "wma", "alac"
+        };
 
         public static string Create_Path(bool Making_Logs_Path = true)
         {
@@ -384,64 +382,96 @@ namespace Downloader_Backend.Logic
 
         public async Task<string?> GetTitle(string url, CancellationToken cancellationToken)
         {
+            var (ytDlpPath, _) = Local_Executables_Path();
+
+            // Strategies from light → heavy
+            var strategies = new[]
+        {
+        $"--print title --playlist-items 1 \"{url}\"",
+        $"--print title --playlist-items 1 --impersonate {GetYtDlpCompatibleBrowser() ?? "chrome"} --extractor-args generic:impersonate \"{url}\"",
+        $"--print title --playlist-items 1 --impersonate {GetYtDlpCompatibleBrowser() ?? "chrome"} --extractor-args generic:impersonate --cookies-from-browser chrome \"{url}\""
+        };
+
+            foreach (var args in strategies)
+            {
+                var (result, title, err) = await TryFetchTitle(ytDlpPath, args, cancellationToken);
+
+                if (result)
+                {
+                    if (!string.IsNullOrWhiteSpace(title)) return title;
+                    continue;
+                }
+            }
+
+            _logger.LogInformation("Failed to fetch title using all strategies.");
+            return null;
+        }
+
+
+        private async Task<(bool, string, string)> TryFetchTitle(string ytDlpPath, string arguments, CancellationToken cancellationToken)
+        {
             Process? proc = null;
+
             try
             {
-                var (ytDlpPath, _) = Local_Executables_Path();
-
                 var psi = new ProcessStartInfo
                 {
                     FileName = ytDlpPath,
-                    Arguments = $"--get-title {url}",
+                    Arguments = arguments,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
-                    CreateNoWindow = true,           // ✅ Hides console window
-                    WindowStyle = ProcessWindowStyle.Hidden // ✅ Ensures no console flash
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
                 };
 
                 proc = Process.Start(psi);
-                if (proc is null)
+
+                if (proc == null)
                 {
-                    _logger.LogInformation("Failed to start yt-dlp for title fetch.");
-                    return null;
+                    _logger.LogInformation("Failed to start yt-dlp process.");
+                    return (false, "", "Failed to start yt-dlp process");
                 }
 
-                // Read stdout in parallel, observing cancellation
-                var readTask = proc.StandardOutput.ReadToEndAsync(cancellationToken);
+                var stdoutTask = proc.StandardOutput.ReadToEndAsync(cancellationToken);
+                var stderrTask = proc.StandardError.ReadToEndAsync(cancellationToken);
 
-                // Wait for yt-dlp to exit, or throw if cancelled
                 await proc.WaitForExitAsync(cancellationToken);
 
-                // If we get here, the process ended normally
-                var output = await readTask;
-                return output.Trim();
+                var stdout = await stdoutTask;
+                var stderr = await stderrTask;
+
+                var output = string.IsNullOrWhiteSpace(stdout) ? stderr : stdout;
+
+                var success = proc.ExitCode == 0;
+
+                return (success, stdout, stderr);
             }
             catch (OperationCanceledException)
             {
                 // Client refreshed/navigated away → kill the yt-dlp process tree
-                if (_processControl.TryGetPid(proc, out int pid))
+                if (_processControl.TryGetPid(proc, out var pid))
                 {
                     var tree = _processControl.GetProcessTree(pid);
                     _processControl.KillProcessTree(tree);
                 }
                 _logger.LogInformation("GetTitle operation cancelled by client.");
-                return null;
+                return (false, "", "Cancelled By User, Maybe browser refreshed");
             }
             catch (Exception ex)
             {
                 // Any other error
-                if (_processControl.TryGetPid(proc, out int pid))
+                if (_processControl.TryGetPid(proc, out var pid))
                 {
                     var tree = _processControl.GetProcessTree(pid);
                     _processControl.KillProcessTree(tree);
                 }
                 _logger.LogInformation($"Error getting title: {ex.Message}");
-                return null;
+                return (false, "", $"error occured: {ex.Message}");
             }
             finally
             {
-                if (_processControl.TryGetPid(proc, out int pid))
+                if (_processControl.TryGetPid(proc, out var pid))
                 {
                     var tree = _processControl.GetProcessTree(pid);
                     _processControl.KillProcessTree(tree);
@@ -450,10 +480,32 @@ namespace Downloader_Backend.Logic
             }
         }
 
-        public List<Format> ParseStandardFormats(JsonElement root)
+
+        public async Task<List<Format>> ParseStandardFormats(JsonElement root, string url, CancellationToken cancellationToken)
         {
 
-            if (!root.TryGetProperty("formats", out var fmts) || fmts.ValueKind != JsonValueKind.Array)
+            JsonElement fmts;
+
+            // Case 1: normal video
+            if (root.TryGetProperty("formats", out var formatsElement))
+            {
+                fmts = formatsElement;
+            }
+            // Case 2: playlist (like Wikipedia)
+            else if (root.TryGetProperty("entries", out var entries) &&
+                     entries.ValueKind == JsonValueKind.Array &&
+                     entries.GetArrayLength() > 0 &&
+                     entries[0].TryGetProperty("formats", out var entryFormats))
+            {
+                fmts = entryFormats;
+                root = entries[0]; // update root so title/thumbnail work
+            }
+            else
+            {
+                return [];
+            }
+
+            if (fmts.ValueKind != JsonValueKind.Array)
                 return [];
 
             string thumbnail = root.TryGetProperty("thumbnail", out var thmbnail) && thmbnail.ValueKind == JsonValueKind.String
@@ -461,52 +513,100 @@ namespace Downloader_Backend.Logic
             : ""; // default thumbnail
 
             string Title = root.TryGetProperty("title", out var title) && title.ValueKind == JsonValueKind.String
-            ? title.GetString()!
-            : "Media Name Not Found!"; // default thumbnail
+            ? title.GetString() ?? ""
+            : ""; // default thumbnail
+
+            if (string.IsNullOrEmpty(Title))
+            {
+                Title = await GetTitle(url, cancellationToken) ?? "";
+                if (!string.IsNullOrEmpty(Title))
+                {
+                    _fileSaver.File_Path = Path.Combine(Create_Path(Making_Logs_Path: true), "temp_file_name.txt");
+                    File.WriteAllText(_fileSaver.File_Path, Title);
+                }
+            }
+            else
+            {
+                _fileSaver.File_Path = Path.Combine(Create_Path(Making_Logs_Path: true), "temp_file_name.txt");
+                File.WriteAllText(_fileSaver.File_Path, Title);
+            }
 
             var formats = fmts.EnumerateArray()
-            .AsParallel()   // Enable parallel processing
-            .AsOrdered()    // Preserve original order in output
-            .Select(f =>
+        .AsParallel()   // Enable parallel processing
+        .AsOrdered()    // Preserve original order in output
+        .Select(f =>
             {
                 // skip encrypted signatures
                 if (f.TryGetProperty("signatureCipher", out _))
                     return null;
 
-                string id = SafeGetString(f, "format_id");
                 string ext = SafeGetString(f, "ext");
+                long fs = SafeGetInt64(f, "filesize");
+                int height = SafeGetInt32(f, "height");
+                string id = SafeGetString(f, "format_id");
+                string note = SafeGetString(f, "format_note", "");
+                string Protocol = SafeGetString(f, "protocol", "");
+                string acodec = SafeGetString(f, "acodec", "none");
+                string vcodec = SafeGetString(f, "vcodec", "none");
+                string resolution = SafeGetString(f, "resolution", "");
+                string videoExt = SafeGetString(f, "video_ext", "none");
+                string audioExt = SafeGetString(f, "audio_ext", "none");
+
 
                 if (!string.IsNullOrWhiteSpace(ext) && ext.Contains("mhtml"))
                     return null; // skip MHTML formats
 
-                string acodec = SafeGetString(f, "acodec", "none");
-                string vcodec = SafeGetString(f, "vcodec", "none");
-
-                long fs = SafeGetInt64(f, "filesize");
-                int height = SafeGetInt32(f, "height");
-                string note = SafeGetString(f, "format_note", "");
-
                 if (!string.IsNullOrWhiteSpace(note) && note.Contains("storyboard"))
                     return null; // skip storyboard formats
 
-                string resolution = SafeGetString(f, "resolution", "");
 
-                string Protocol = SafeGetString(f, "protocol", "");
+                if (height == 0 || string.IsNullOrWhiteSpace(resolution) || resolution == "unknown")
+                {
+                    string notes = SafeGetString(f, "format_note", "");
+                    if (!string.IsNullOrWhiteSpace(notes) && notes.Contains('p'))
+                    {
+                        var m = Containe_resolution_Symbol_Regex().Match(notes);
+                        if (m.Success) height = int.Parse(m.Groups[1].Value);
+                        resolution = notes;
+                    }
+                    else
+                    {
+                        string fmtUrl = SafeGetString(f, "url", "");
+                        var m = Resolution_regex().Match(fmtUrl);
+                        if (m.Success)
+                        {
+                            height = int.Parse(m.Groups[1].Value);
+                            resolution = height + "p";
+                        }
+                    }
+                }
+
                 string Slow_Or_Fast = "fast"; // default to fast
                 if (!string.IsNullOrWhiteSpace(Protocol) && MyRegex_1().IsMatch(Protocol))
                     Slow_Or_Fast = "slow"; // HLS / m3u8 is considered slow
 
-                bool isAudioOnly = vcodec == "none" && acodec != "none";
-                bool isVideoOnly = acodec == "none" && vcodec != "none";
 
-                // Convert to MB
                 long sizeInMb = fs / 1024 / 1024;
-
-                // If yt-dlp reported 0, show "--MB"
                 string sizeLabel = sizeInMb == 0 ? "--MB" : $"{sizeInMb}MB";
-
                 string label = $"{(resolution.Contains("audio only") ? "" : $"{height}p • ")}{sizeLabel} • {ext} • {Slow_Or_Fast} • {resolution}";
-                //  | A:{acodec} | V:{vcodec}
+
+                // Treat null, empty, whitespace, or "none" as "none"
+                bool IsNone(string? s) => string.IsNullOrWhiteSpace(s) || s == "none";
+
+                bool hasVideo = !IsNone(vcodec) || !IsNone(videoExt);
+                bool hasAudio = !IsNone(acodec) || !IsNone(audioExt);
+
+                // Ultimate fallback for completely broken extractors
+                if (!hasVideo && !hasAudio)
+                {
+                    if (KnownAudioExtensions.Contains(ext))
+                        hasAudio = true;
+                    else if (!string.IsNullOrWhiteSpace(ext))
+                        hasVideo = true;   // safest default
+                }
+
+                bool isAudioOnly = hasAudio && !hasVideo;
+                bool isVideoOnly = (hasVideo && !hasAudio) || (hasVideo && hasAudio);
 
                 return new Format
                 {
@@ -523,7 +623,7 @@ namespace Downloader_Backend.Logic
             return formats!;
         }
 
-        public List<Format> ParseFacebookFormats(JsonElement root)
+        public async Task<List<Format>> ParseFacebookFormats(JsonElement root, string url, CancellationToken cancellationToken)
         {
 
             if (!root.TryGetProperty("formats", out var fmts) || fmts.ValueKind != JsonValueKind.Array)
@@ -539,14 +639,25 @@ namespace Downloader_Backend.Logic
                 : "https://www.facebook.com/images/fb_icon_325x325.png"; // default thumbnail
 
             string Title = root.TryGetProperty("title", out var title) && title.ValueKind == JsonValueKind.String
-                ? title.GetString()!
-                : "Media Name Not Found!"; // default thumbnail
+                ? title.GetString() ?? ""
+                : ""; // default thumbnail
+
+
+            if (string.IsNullOrWhiteSpace(Title))
+            {
+                Title = await GetTitle(url, cancellationToken) ?? "";
+                if (!string.IsNullOrWhiteSpace(Title))
+                {
+                    _fileSaver.File_Path = Path.Combine(Create_Path(Making_Logs_Path: true), "temp_file_name.txt");
+                    File.WriteAllText(_fileSaver.File_Path, Title);
+                }
+            }
 
 
             var formats = fmts.EnumerateArray()
-            .AsParallel()   // Enable parallel processing
-            .AsOrdered()    // Preserve original order in output
-            .Select(f =>
+        .AsParallel()   // Enable parallel processing
+        .AsOrdered()    // Preserve original order in output
+        .Select(f =>
             {
                 string id = SafeGetString(f, "format_id");
                 string ext = SafeGetString(f, "ext", "mp4");
@@ -596,7 +707,7 @@ namespace Downloader_Backend.Logic
 
 
 
-        public async Task<IActionResult> DownloadAsync(DownloadJob job, GlobalCancellationService _globalCancellation, IDownloadPersistence _download_history, DownloadTracker _tracker, CancellationToken linkedToken, bool resume = false, bool restart = false, bool tryCookies = false, bool tryImpersonate = false, string Token_Key = "")
+        public async Task<IActionResult> DownloadAsync(DownloadJob job, CancellationToken linkedToken, GlobalCancellationService _globalCancellation, IDownloadPersistence _download_history, DownloadTracker _tracker, bool resume = false, bool restart = false, bool tryCookies = false, bool tryImpersonate = false, string Token_Key = "")
         {
             string videoPath = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
             string downloadsFolder = Path.Combine(videoPath, "Dlp_downloads");
@@ -617,6 +728,7 @@ namespace Downloader_Backend.Logic
             {
                 await ExecuteDownloadWithRetriesAsync(
                     job,
+                    linkedToken,
                     _globalCancellation,
                     _download_history,
                     _tracker,
@@ -627,9 +739,7 @@ namespace Downloader_Backend.Logic
                     Token_Key,
                     outputFile,
                     ytDlpPath,
-                    ffmpegPath,
-                    linkedToken
-                    );
+                    ffmpegPath);
             }, linkedToken);
 
             return new OkObjectResult(new { jobId = job.Id, title = job.Title });
@@ -669,6 +779,7 @@ namespace Downloader_Backend.Logic
         // ===================================================================
         private async Task ExecuteDownloadWithRetriesAsync(
             DownloadJob job,
+            CancellationToken linkedToken,
             GlobalCancellationService _globalCancellation,
             IDownloadPersistence _download_history,
             DownloadTracker _tracker,
@@ -679,9 +790,7 @@ namespace Downloader_Backend.Logic
             string Token_Key,
             string outputFile,
             string ytDlpPath,
-            string ffmpegPath,
-            CancellationToken linkedToken
-            )
+            string ffmpegPath)
         {
             try
             {
@@ -699,6 +808,7 @@ namespace Downloader_Backend.Logic
 
                     bool success = await ExecuteSingleAttemptAsync(
                         job,
+                        linkedToken,
                         _globalCancellation,
                         _download_history,
                         _tracker,
@@ -709,9 +819,7 @@ namespace Downloader_Backend.Logic
                         outputFile,
                         ytDlpPath,
                         ffmpegPath,
-                        Token_Key,
-                        linkedToken
-                        );
+                        Token_Key);
 
                     if (success)
                     {
@@ -820,6 +928,7 @@ namespace Downloader_Backend.Logic
         // ===================================================================
         private async Task<bool> ExecuteSingleAttemptAsync(
             DownloadJob job,
+            CancellationToken linkedToken,
             GlobalCancellationService _globalCancellation,
             IDownloadPersistence _download_history,
             DownloadTracker _tracker,
@@ -830,9 +939,7 @@ namespace Downloader_Backend.Logic
             string outputFile,
             string ytDlpPath,
             string ffmpegPath,
-            string Token_Key,
-            CancellationToken linkedToken
-            )
+            string Token_Key)
         {
             var psi = BuildProcessStartInfo(ytDlpPath, ffmpegPath, useCookies, useImpersonate, applyResume, applyRestart, job, outputFile);
 
@@ -860,7 +967,7 @@ namespace Downloader_Backend.Logic
                         var line = await proc.StandardError.ReadLineAsync(linkedToken);
                         if (!string.IsNullOrWhiteSpace(line))
                             job.ErrorLog += "[stderr] " + line + "\n";
-                        job.Status = "disrupting";
+                        job.Status = "Trying-err";
                     }
                 }, linkedToken);
 
@@ -924,7 +1031,7 @@ namespace Downloader_Backend.Logic
             }
             finally
             {
-                if (_processControl.TryGetPid(proc, out int pid))
+                if (_processControl.TryGetPid(proc, out var pid))
                 {
                     var tree = _processControl.GetProcessTree(pid);
                     _processControl.KillProcessTree(tree);
@@ -935,7 +1042,61 @@ namespace Downloader_Backend.Logic
         }
 
         // Small helper record (cleaner than tuples)
+        private sealed record DownloadStrategy(bool UseCookies, bool UseImpersonate, string Name);
 
+
+
+
+        public readonly string[] CookieTriggers =
+        [
+    "cookies", "login", "429", "too many requests", "rate limit",
+    "sabr", "sign in", "log in", "authentication required"
+        ];
+
+        public readonly string[] ImpersonateTriggers =
+        [
+    "Cloudflare anti-bot challenge",
+    "Got HTTP Error 403 caused by Cloudflare",
+    "generic:impersonate",
+    "anti-bot challenge",
+    "attention required!",
+    "checking your browser",
+    "just a moment",
+    "cf-ray",
+    "Ray ID"
+        ];
+
+
+        public readonly string[] PermanentErrorTriggers =
+        [
+    "video unavailable",
+    "this video is unavailable",
+    "private video",
+    "private playlist",
+    "this video is private",
+    "sign in to view",
+    "login required to view",
+    "copyright",
+    "copyrighted content",
+    "removed by the uploader",
+    "geo restricted",
+    "geoblocked",
+    "not available in your country",
+    "not available in your region",
+    "this content is not available",
+    "age restricted",
+    "age-restricted",
+    "age gate"
+        ];
+
+
+        public enum YtDlpStrategy
+        {
+            Normal,
+            CookiesOnly,
+            ImpersonateOnly,
+            CookiesAndImpersonate
+        }
 
 
         public async Task<(bool success, string stdout, string stderr, bool loginRequired)> TryRunYtDlpAsync(string[] args, CancellationToken cancellationToken)
@@ -1090,12 +1251,9 @@ namespace Downloader_Backend.Logic
                 else
                 {
                     // Only Linux/macOS fallback – still parallelized in your existing KillProcessTree
-                    if (_processControl.TryGetPid(process, out int pid))
-                    {
-                        var tree = _processControl.GetProcessTree(pid);
-                        _logger.LogInformation("going to kill linux / mac process tree of get format method: {tree}", tree);
-                        _processControl.KillProcessTree(tree);
-                    }
+                    var tree = _processControl.GetProcessTree(process.Id);
+                    _logger.LogInformation("going to kill linux / mac process tree of get format method: {tree}", tree);
+                    _processControl.KillProcessTree(tree);
                 }
             }
             catch (Exception ex)
@@ -1153,7 +1311,7 @@ namespace Downloader_Backend.Logic
                     if (process != null)
                     {
                         string result = process.StandardOutput.ReadToEnd().Trim();
-                        process?.WaitForExit();
+                        process.WaitForExit();
                         browser = MapToSupportedBrowser(result);
                     }
                 }
@@ -1174,7 +1332,7 @@ namespace Downloader_Backend.Logic
                     if (process != null)
                     {
                         string result = process.StandardOutput.ReadToEnd().Trim();
-                        process?.WaitForExit();
+                        process.WaitForExit();
                         browser = MapToSupportedBrowser(result);
                     }
                 }
@@ -1185,7 +1343,7 @@ namespace Downloader_Backend.Logic
             }
             finally
             {
-                if (_processControl.TryGetPid(process, out int pid))
+                if (_processControl.TryGetPid(process, out var pid))
                 {
                     var tree = _processControl.GetProcessTree(pid);
                     _processControl.KillProcessTree(tree); // kill the process tree
@@ -1311,5 +1469,11 @@ namespace Downloader_Backend.Logic
         [GeneratedRegex(@"^/posts/[^/?]+")]
         private static partial Regex MyRegex_3();
 
+
+        [GeneratedRegex(@"\.(\d{2,4})p\.", RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-US")]
+        private static partial Regex Resolution_regex();
+
+        [GeneratedRegex(@"(\d+)p")]
+        private static partial Regex Containe_resolution_Symbol_Regex();
     }
 }

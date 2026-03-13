@@ -4,7 +4,6 @@ using Downloader_Backend.Logic;
 using Downloader_Backend.Model;
 using Downloader_Backend.Data;
 using Microsoft.EntityFrameworkCore;
-using System.Runtime.InteropServices;
 
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -23,6 +22,7 @@ builder.Services.AddControllers();
 builder.Services.AddSingleton<DownloadTracker>();
 builder.Services.AddSingleton<PortKiller>();
 builder.Services.AddSingleton<GlobalCancellationService>();
+builder.Services.AddSingleton<File_Saver>();
 
 // SCOPED - New instance per request
 builder.Services.AddScoped<IDownloadPersistence, DownloadPersistence>();
@@ -65,13 +65,13 @@ builder.WebHost.ConfigureKestrel(options =>
 
 
 
-/* builder.Services.AddCors(options =>
+builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAllOrigins",
     builder => builder.WithOrigins("http://localhost:5173")
     .AllowAnyMethod()
     .AllowAnyHeader());
-}); */
+});
 
 
 
@@ -169,7 +169,7 @@ using (var scope = app.Services.CreateScope())
 // HTTP PIPELINE
 // --------------------
 // app.UseHttpsRedirection();
-// app.UseCors("AllowAllOrigins");
+app.UseCors("AllowAllOrigins");
 app.UseStaticFiles();
 app.MapControllers();
 app.MapGet("/", () => "Media Downloader Home!");
@@ -189,7 +189,7 @@ const int Port = 5050;
 
 try
 {
-    if (utility.IsDesktopLaunch())
+/*     if (utility.IsDesktopLaunch())
     {
         Log.Information("\n\n---- App Started by User ----");
 
@@ -223,7 +223,7 @@ try
         return;
     }
     else
-    {
+    { */
         // Pure service mode (Linux systemd only)
         Log.Information("\n\nApplication starting in systemd service mode...");
         if (Port_Killer.Is_Our_Backend_Running(Port)) return;
@@ -233,7 +233,7 @@ try
             return;
         }
         await app.RunAsync();
-    }
+/*     } */
 
 }
 catch (Exception ex)
@@ -244,4 +244,3 @@ finally
 {
     Log.CloseAndFlush();
 }
-
