@@ -79,11 +79,7 @@ jobs:
 
           # ================= LINUX =================
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          # curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o publish/tools/yt-dlp
-          sudo apt-get install yt-dlp
-          yt_dlp_path=$(which yt-dlp)
-          cp $yt_dlp_path publish/tools/yt-dlp
-
+            wget -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -O publish/tools/yt-dlp
             chmod +x publish/tools/yt-dlp
 
             curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
