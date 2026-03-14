@@ -10,7 +10,8 @@ using System.Runtime.InteropServices;
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
-    ContentRootPath = AppContext.BaseDirectory
+    ContentRootPath = AppContext.BaseDirectory,
+    WebRootPath = Path.Combine(AppContext.BaseDirectory, "wwwroot")
 });
 
 
