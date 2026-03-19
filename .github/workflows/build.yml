@@ -188,17 +188,18 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           # === Download + place ONLY the matching node for this build ===
-          LATEST=$(curl -s https://nodejs.org/dist/index.json | grep -m1 '"version"' | cut -d '"' -f4 | sed 's/v//')
+          LATEST=$(curl -s https://nodejs.org/dist/index.json | jq -r '.[0].version' | sed 's/v//')
           if [[ "${{ matrix.runtime }}" == *x64* ]]; then
-            NODE_URL="https://nodejs.org/dist/latest/node-v${LATEST}-darwin-x64.tar.xz"
+            NODE_URL="https://nodejs.org/dist/v${LATEST}/node-v${LATEST}-darwin-x64.tar.xz"
             NODE_FILE="node_mac_x64"
             echo "📥 x64 build → downloading & placing ONLY node_mac_x64"
           else
-            NODE_URL="https://nodejs.org/dist/latest/node-v${LATEST}-darwin-arm64.tar.xz"
+            NODE_URL="https://nodejs.org/dist/v${LATEST}/node-v${LATEST}-darwin-arm64.tar.xz"
             NODE_FILE="node_mac_arm64"
             echo "📥 arm64 build → downloading & placing ONLY node_mac_arm64"
           fi
-          curl -L "$NODE_URL" -o node.tar.xz
+          set -e
+          curl -fL "$NODE_URL" -o node.tar.xz
           tar -xf node.tar.xz
           cp node-v${LATEST}-darwin-*/bin/node publish/tools/${NODE_FILE}
           chmod +x publish/tools/${NODE_FILE}
