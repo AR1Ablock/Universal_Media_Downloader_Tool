@@ -94,10 +94,10 @@ jobs:
               -o publish/tools/yt-dlp_mac
             chmod +x publish/tools/yt-dlp_mac
 
-            curl -L https://evermeet.cx/ffmpeg/ffmpeg-6.1.zip \
-              -o ffmpeg.zip
-            unzip -q ffmpeg.zip
-            mv ffmpeg publish/tools/ffmpeg_mac
+            TMPDIR=$(mktemp -d)
+            curl -L https://github.com/AR1Ablock/ffmpeg-macos-universal2/releases/download/latest/ffmpeg-universal-macos.zip -o "$TMPDIR/ffmpeg.zip"
+            unzip -q "$TMPDIR/ffmpeg.zip" -d "$TMPDIR"
+            mv "$TMPDIR/ffmpeg" publish/tools/ffmpeg_mac
             chmod +x publish/tools/ffmpeg_mac
           fi
         shell: bash
