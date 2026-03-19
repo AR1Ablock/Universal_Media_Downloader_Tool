@@ -35,6 +35,10 @@ jobs:
             runtime: osx-x64
             name: MediaDownloader-macOS-x64
             ext: pkg
+          - os: macos-latest
+            runtime: osx-arm64
+            name: MediaDownloader-macOS-arm64
+            ext: pkg
 
     runs-on: ${{ matrix.os }}
 
@@ -60,20 +64,23 @@ jobs:
         shell: bash
 
       # ==========================================================
-      # Download yt-dlp + ffmpeg + NODE.JS (your new critical part)
+      # Download yt-dlp + ffmpeg (Node moved to mac installer step)
       # ==========================================================
-      - name: Download Tools Binaries (yt-dlp + ffmpeg + Node)
+      - name: Download Tools Binaries (yt-dlp + ffmpeg + Node for Win/Linux only)
         run: |
           mkdir -p publish/tools
           echo "🛠️ Running on ${{ matrix.os }}"
 
-          # ----- Detect latest Node.js (works on all runners) -----
           LATEST=$(curl -s https://nodejs.org/dist/latest/ | grep -oE 'node-v[0-9]+\.[0-9]+\.[0-9]+' | head -n1 | sed 's/node-v//')
           echo "✅ Latest Node.js = v$LATEST"
 
           # ================= WINDOWS =================
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
+
+            # yt_dlp Windows
             curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -o publish/tools/yt-dlp.exe
+
+            # ffmpeg Windows
             curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -o ffmpeg.zip
             unzip -q ffmpeg.zip
             cp ffmpeg-*/bin/ffmpeg.exe publish/tools/ffmpeg.exe
@@ -85,8 +92,12 @@ jobs:
 
           # ================= LINUX =================
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+
+            # yt_dlp Linux
             wget -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -O publish/tools/yt-dlp
             chmod +x publish/tools/yt-dlp
+
+            # ffmpeg Linux
             curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
             tar -xf ffmpeg.tar.xz
             cp ffmpeg-*-amd64-static/ffmpeg publish/tools/ffmpeg
@@ -98,31 +109,24 @@ jobs:
             cp node-v${LATEST}-linux-x64/bin/node publish/tools/node
             chmod +x publish/tools/node
 
-          # ================= MACOS (both builds get BOTH nodes + universal ffmpeg) =================
+            strip publish/tools/node || true
+            strip publish/tools/ffmpeg || true
+            strip publish/tools/yt-dlp || true
+
+          # ================= MACOS (only yt-dlp + universal ffmpeg) =================
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+
+            # yt_dlp MacOS
             curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos -o publish/tools/yt-dlp_mac
             chmod +x publish/tools/yt-dlp_mac
 
-            # Universal ffmpeg (your repo)
+            # ffmpeg MacOS
             TMPDIR=$(mktemp -d)
             curl -L https://github.com/AR1Ablock/ffmpeg-macos-universal2/releases/download/latest/ffmpeg-universal-macos.zip -o "$TMPDIR/ffmpeg.zip"
             unzip -q "$TMPDIR/ffmpeg.zip" -d "$TMPDIR"
             mv "$TMPDIR/ffmpeg" publish/tools/ffmpeg_mac
             chmod +x publish/tools/ffmpeg_mac
-
-            # === NODE macOS x64 + arm64 (exactly as you requested) ===
-            echo "📥 Downloading both Node macOS binaries..."
-            curl -L https://nodejs.org/dist/latest/node-v${LATEST}-darwin-x64.tar.xz -o node-x64.tar.xz
-            tar -xf node-x64.tar.xz
-            cp node-v${LATEST}-darwin-x64/bin/node publish/tools/node_mac_x64
-            chmod +x publish/tools/node_mac_x64
-
-            curl -L https://nodejs.org/dist/latest/node-v${LATEST}-darwin-arm64.tar.xz -o node-arm64.tar.xz
-            tar -xf node-arm64.tar.xz
-            cp node-v${LATEST}-darwin-arm64/bin/node publish/tools/node_mac_arm64
-            chmod +x publish/tools/node_mac_arm64
-
-            echo "✅ node_mac_x64 + node_mac_arm64 placed in tools/"
+            echo "✅ yt-dlp_mac + ffmpeg_mac ready (Node will be added in packaging step)"
           fi
         shell: bash
 
@@ -178,29 +182,46 @@ jobs:
         shell: bash
 
       # ==========================================================
-      # ==================== macOS (.app + PKG) ==================
+      # ==================== MacOS (.pkg) ========================
       # ==========================================================
-      - name: Build macOS App + PKG
+      - name: Build macOS App + PKG (with correct node only)
         if: matrix.os == 'macos-latest'
         run: |
+          # === Download + place ONLY the matching node for this build ===
+          LATEST=$(curl -s https://nodejs.org/dist/index.json | grep -m1 '"version"' | cut -d '"' -f4 | sed 's/v//')
+          if [[ "${{ matrix.runtime }}" == *x64* ]]; then
+            NODE_URL="https://nodejs.org/dist/latest/node-v${LATEST}-darwin-x64.tar.xz"
+            NODE_FILE="node_mac_x64"
+            echo "📥 x64 build → downloading & placing ONLY node_mac_x64"
+          else
+            NODE_URL="https://nodejs.org/dist/latest/node-v${LATEST}-darwin-arm64.tar.xz"
+            NODE_FILE="node_mac_arm64"
+            echo "📥 arm64 build → downloading & placing ONLY node_mac_arm64"
+          fi
+          curl -L "$NODE_URL" -o node.tar.xz
+          tar -xf node.tar.xz
+          cp node-v${LATEST}-darwin-*/bin/node publish/tools/${NODE_FILE}
+          chmod +x publish/tools/${NODE_FILE}
+          echo "✅ Only ${NODE_FILE} added to tools/"
+
+          strip publish/tools/node_mac_* || true
+          strip publish/tools/ffmpeg_mac || true
+          strip publish/tools/yt-dlp_mac || true
+
+          # === Now build the .app + .pkg (exactly your original) ===
           mkdir -p MediaDownloader.app/Contents/MacOS
           mkdir -p MediaDownloader.app/Contents/Resources
-
           cp -r publish/* MediaDownloader.app/Contents/MacOS/
           cp Installers_Resources/info.plist MediaDownloader.app/Contents/
           cp Installers_Resources/favicon.icns MediaDownloader.app/Contents/Resources/
-
           chmod +x MediaDownloader.app/Contents/MacOS/Downloader_Backend
           chmod +x MediaDownloader.app/Contents/MacOS/tools/* || true
-
           mkdir -p Payload/Applications
           cp -r MediaDownloader.app Payload/Applications/
-
           mkdir -p Scripts
           cp Installers_Resources/postinstall Scripts/
           cp Installers_Resources/com.mediadownloader.backend.plist Scripts/
           chmod +x Scripts/postinstall
-
           pkgbuild \
             --root Payload/Applications \
             --identifier com.mediadownloader.pkg \
