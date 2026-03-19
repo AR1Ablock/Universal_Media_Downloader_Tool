@@ -60,45 +60,69 @@ jobs:
         shell: bash
 
       # ==========================================================
-      # Download yt-dlp & ffmpeg (Replace LFS pointers)
+      # Download yt-dlp + ffmpeg + NODE.JS (your new critical part)
       # ==========================================================
-      - name: Download Tools Binaries
+      - name: Download Tools Binaries (yt-dlp + ffmpeg + Node)
         run: |
           mkdir -p publish/tools
-          echo "Running on ${{ matrix.os }}"
+          echo "🛠️ Running on ${{ matrix.os }}"
+
+          # ----- Detect latest Node.js (works on all runners) -----
+          LATEST=$(curl -s https://nodejs.org/dist/latest/ | grep -oE 'node-v[0-9]+\.[0-9]+\.[0-9]+' | head -n1 | sed 's/node-v//')
+          echo "✅ Latest Node.js = v$LATEST"
 
           # ================= WINDOWS =================
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe \
-              -o publish/tools/yt-dlp.exe
-
-            curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip \
-              -o ffmpeg.zip
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -o publish/tools/yt-dlp.exe
+            curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -o ffmpeg.zip
             unzip -q ffmpeg.zip
             cp ffmpeg-*/bin/ffmpeg.exe publish/tools/ffmpeg.exe
+
+            # Node Windows
+            curl -L https://nodejs.org/dist/latest/node-v${LATEST}-win-x64.zip -o node.zip
+            unzip -q node.zip
+            cp node-v${LATEST}-win-x64/node.exe publish/tools/node.exe
 
           # ================= LINUX =================
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             wget -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -O publish/tools/yt-dlp
             chmod +x publish/tools/yt-dlp
-
-            curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
-              -o ffmpeg.tar.xz
+            curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
             tar -xf ffmpeg.tar.xz
             cp ffmpeg-*-amd64-static/ffmpeg publish/tools/ffmpeg
             chmod +x publish/tools/ffmpeg
 
-          # ================= MACOS =================
+            # Node Linux
+            curl -L https://nodejs.org/dist/latest/node-v${LATEST}-linux-x64.tar.xz -o node.tar.xz
+            tar -xf node.tar.xz
+            cp node-v${LATEST}-linux-x64/bin/node publish/tools/node
+            chmod +x publish/tools/node
+
+          # ================= MACOS (both builds get BOTH nodes + universal ffmpeg) =================
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos \
-              -o publish/tools/yt-dlp_mac
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos -o publish/tools/yt-dlp_mac
             chmod +x publish/tools/yt-dlp_mac
 
+            # Universal ffmpeg (your repo)
             TMPDIR=$(mktemp -d)
             curl -L https://github.com/AR1Ablock/ffmpeg-macos-universal2/releases/download/latest/ffmpeg-universal-macos.zip -o "$TMPDIR/ffmpeg.zip"
             unzip -q "$TMPDIR/ffmpeg.zip" -d "$TMPDIR"
             mv "$TMPDIR/ffmpeg" publish/tools/ffmpeg_mac
             chmod +x publish/tools/ffmpeg_mac
+
+            # === NODE macOS x64 + arm64 (exactly as you requested) ===
+            echo "📥 Downloading both Node macOS binaries..."
+            curl -L https://nodejs.org/dist/latest/node-v${LATEST}-darwin-x64.tar.xz -o node-x64.tar.xz
+            tar -xf node-x64.tar.xz
+            cp node-v${LATEST}-darwin-x64/bin/node publish/tools/node_mac_x64
+            chmod +x publish/tools/node_mac_x64
+
+            curl -L https://nodejs.org/dist/latest/node-v${LATEST}-darwin-arm64.tar.xz -o node-arm64.tar.xz
+            tar -xf node-arm64.tar.xz
+            cp node-v${LATEST}-darwin-arm64/bin/node publish/tools/node_mac_arm64
+            chmod +x publish/tools/node_mac_arm64
+
+            echo "✅ node_mac_x64 + node_mac_arm64 placed in tools/"
           fi
         shell: bash
 
