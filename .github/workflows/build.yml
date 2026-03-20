@@ -189,19 +189,21 @@ jobs:
         run: |
           # === Download + place ONLY the matching node for this build ===
           LATEST=$(curl -s https://nodejs.org/dist/index.json | jq -r '.[0].version' | sed 's/v//')
+          echo "Run time is: ${{ matrix.runtime }}"
           if [[ "${{ matrix.runtime }}" == *x64* ]]; then
             NODE_URL="https://nodejs.org/dist/v${LATEST}/node-v${LATEST}-darwin-x64.tar.xz"
+            NODE_DIR="node-v${LATEST}-darwin-x64"
             NODE_FILE="node_mac_x64"
             echo "📥 x64 build → downloading & placing ONLY node_mac_x64"
           else
             NODE_URL="https://nodejs.org/dist/v${LATEST}/node-v${LATEST}-darwin-arm64.tar.xz"
+            NODE_DIR="node-v${LATEST}-darwin-arm64"
             NODE_FILE="node_mac_arm64"
             echo "📥 arm64 build → downloading & placing ONLY node_mac_arm64"
           fi
-          set -e
           curl -fL "$NODE_URL" -o node.tar.xz
           tar -xf node.tar.xz
-          cp node-v${LATEST}-darwin-*/bin/node publish/tools/${NODE_FILE}
+          cp "${NODE_DIR}/bin/node" "publish/tools/${NODE_FILE}"
           chmod +x publish/tools/${NODE_FILE}
           echo "✅ Only ${NODE_FILE} added to tools/"
 
