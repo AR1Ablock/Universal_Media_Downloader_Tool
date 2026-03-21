@@ -77,36 +77,36 @@ jobs:
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
 
             # yt_dlp Windows
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -o publish/tools/yt-dlp.exe
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -o publish/tools/yt_dlp_win_x64.exe
 
             # ffmpeg Windows
-            curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -o ffmpeg.zip
-            unzip -q ffmpeg.zip
-            cp ffmpeg-*/bin/ffmpeg.exe publish/tools/ffmpeg.exe
+            curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -o ffmpeg_win_x64.zip
+            unzip -q ffmpeg_win_x64.zip
+            cp ffmpeg-*/bin/ffmpeg.exe publish/tools/ffmpeg_win_x64.exe
 
-            # Node Windows
-            curl -L https://nodejs.org/dist/latest/node-v${LATEST}-win-x64.zip -o node.zip
-            unzip -q node.zip
-            cp node-v${LATEST}-win-x64/node.exe publish/tools/node.exe
+            # Deno Windows
+            curl -L https://github.com/denoland/deno/releases/download/v2.7.7/deno-x86_64-pc-windows-msvc.zip -o deno_win_x64.zip
+            unzip -q deno_win_x64.zip
+            cp deno.exe publish/tools/deno_win_x64.exe
 
           # ================= LINUX =================
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
 
             # yt_dlp Linux
-            wget -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -O publish/tools/yt-dlp
-            chmod +x publish/tools/yt-dlp
+            wget -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -O publish/tools/yt_dlp_linux_x64
+            chmod +x publish/tools/yt_dlp_linux_x64
 
             # ffmpeg Linux
-            curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
-            tar -xf ffmpeg.tar.xz
-            cp ffmpeg-*-amd64-static/ffmpeg publish/tools/ffmpeg
-            chmod +x publish/tools/ffmpeg
+            curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg_linux_x64.tar.xz
+            tar -xf ffmpeg_linux_x64.tar.xz
+            cp ffmpeg-*-amd64-static/ffmpeg publish/tools/ffmpeg_linux_x64
+            chmod +x publish/tools/ffmpeg_linux_x64
 
-            # Node Linux
-            curl -L https://nodejs.org/dist/latest/node-v${LATEST}-linux-x64.tar.xz -o node.tar.xz
-            tar -xf node.tar.xz
-            cp node-v${LATEST}-linux-x64/bin/node publish/tools/node
-            chmod +x publish/tools/node
+            # Deno Linux
+            curl -L https://github.com/denoland/deno/releases/download/v2.7.7/deno-x86_64-unknown-linux-gnu.zip -o deno_linux_x64.zip
+            unzip -q deno_linux_x64.zip
+            cp deno publish/tools/deno_linux_x64
+            chmod +x publish/tools/deno_linux_x64
 
             strip publish/tools/node || true
             strip publish/tools/ffmpeg || true
@@ -116,15 +116,15 @@ jobs:
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
 
             # yt_dlp MacOS
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos -o publish/tools/yt-dlp_mac
-            chmod +x publish/tools/yt-dlp_mac
+            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos -o publish/tools/yt_dlp_mac_universal
+            chmod +x publish/tools/yt_dlp_mac_universal
 
             # ffmpeg MacOS
             TMPDIR=$(mktemp -d)
-            curl -L https://github.com/AR1Ablock/ffmpeg-macos-universal2/releases/download/latest/ffmpeg-universal-macos.zip -o "$TMPDIR/ffmpeg.zip"
-            unzip -q "$TMPDIR/ffmpeg.zip" -d "$TMPDIR"
-            mv "$TMPDIR/ffmpeg" publish/tools/ffmpeg_mac
-            chmod +x publish/tools/ffmpeg_mac
+            curl -L https://github.com/AR1Ablock/ffmpeg-macos-universal2/releases/download/latest/ffmpeg-universal-macos.zip -o "$TMPDIR/ffmpeg_mac_universal.zip"
+            unzip -q "$TMPDIR/ffmpeg_mac_universal.zip" -d "$TMPDIR"
+            mv "$TMPDIR/ffmpeg" publish/tools/ffmpeg_mac_universal
+            chmod +x publish/tools/ffmpeg_mac_universal
             echo "✅ yt-dlp_mac + ffmpeg_mac ready (Node will be added in packaging step)"
           fi
         shell: bash
