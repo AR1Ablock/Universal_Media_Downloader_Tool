@@ -34,36 +34,61 @@
   </ItemGroup>
 
 <!-- 1️⃣ When -r is provided (publish or build with runtime) -->
-<ItemGroup Condition="'$(RuntimeIdentifier)' != '' and '$(RuntimeIdentifier)' == 'win-x64'">
-  <Content Include="tools\ffmpeg.exe" CopyToOutputDirectory="PreserveNewest" />
-  <Content Include="tools\yt-dlp.exe" CopyToOutputDirectory="PreserveNewest" />
+<ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+  <Content Include="tools\yt_dlp_win_x64.exe" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools\ffmpeg_win_x64.exe" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools\deno_win_x64.exe" CopyToOutputDirectory="PreserveNewest" />
 </ItemGroup>
 
-<ItemGroup Condition="'$(RuntimeIdentifier)' != '' and '$(RuntimeIdentifier)' == 'linux-x64'">
-  <Content Include="tools/ffmpeg" CopyToOutputDirectory="PreserveNewest" />
-  <Content Include="tools/yt-dlp" CopyToOutputDirectory="PreserveNewest" />
+<ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-arm64'">
+  <Content Include="tools\yt_dlp_win_arm64.exe" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools\ffmpeg_win_arm64.exe" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools\deno_win_arm64.exe" CopyToOutputDirectory="PreserveNewest" />
 </ItemGroup>
 
-<ItemGroup Condition="'$(RuntimeIdentifier)' != '' and '$(RuntimeIdentifier)' == 'osx-x64'">
-  <Content Include="tools/ffmpeg_mac" CopyToOutputDirectory="PreserveNewest" />
-  <Content Include="tools/yt-dlp_mac" CopyToOutputDirectory="PreserveNewest" />
+<ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
+  <Content Include="tools/yt_dlp_linux_x64" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/ffmpeg_linux_x64" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/deno_linux_x64" CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
+
+<ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-arm64'">
+  <Content Include="tools/yt_dlp_linux_arm64" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/ffmpeg_linux_arm64" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/deno_linux_arm64" CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
+
+<ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64'">
+  <Content Include="tools/yt_dlp_mac_universal" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/ffmpeg_mac_universal" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/deno_mac_x64" CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
+
+<ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-arm64'">
+  <Content Include="tools/yt_dlp_mac_universal" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/ffmpeg_mac_universal" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/deno_mac_arm64" CopyToOutputDirectory="PreserveNewest" />
 </ItemGroup>
 
 
 <!-- 2️⃣ Fallback: No -r provided (normal build / debug / run) -->
 <ItemGroup Condition="'$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">
-  <Content Include="tools\ffmpeg.exe" CopyToOutputDirectory="PreserveNewest" />
-  <Content Include="tools\yt-dlp.exe" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools\yt_dlp_win_x64.exe" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools\ffmpeg_win_x64.exe" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools\deno_win_x64.exe" CopyToOutputDirectory="PreserveNewest" />
 </ItemGroup>
 
 <ItemGroup Condition="'$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Linux'))">
-  <Content Include="tools/ffmpeg" CopyToOutputDirectory="PreserveNewest" />
-  <Content Include="tools/yt-dlp" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/yt_dlp_linux_x64" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/ffmpeg_linux_x64" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/deno_linux_x64" CopyToOutputDirectory="PreserveNewest" />
 </ItemGroup>
 
 <ItemGroup Condition="'$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('OSX'))">
-  <Content Include="tools/ffmpeg_mac" CopyToOutputDirectory="PreserveNewest" />
-  <Content Include="tools/yt-dlp_mac" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/yt_dlp_mac_universal" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/ffmpeg_mac_universal" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/deno_mac_x64" CopyToOutputDirectory="PreserveNewest" />
+  <Content Include="tools/deno_mac_arm64" CopyToOutputDirectory="PreserveNewest" />
 </ItemGroup>
 
 </Project>
