@@ -1,4 +1,3 @@
-
 name: Build MediaDownloader
 
 on:
@@ -13,28 +12,45 @@ on:
           - dev
           - staging
           - production
-          
+
 permissions:
-  contents: write   # REQUIRED for creating releases
+  contents: write # REQUIRED for creating releases
 
 jobs:
   build:
     strategy:
       matrix:
+        # ===================================================================
+        # FUTURE-PROOF MATRIX — just add a new row to support any new OS/arch
+        # ===================================================================
         include:
           - os: windows-latest
+            arch: x64
             runtime: win-x64
             name: MediaDownloader-Windows-x64
             ext: exe
+          - os: windows-latest
+            arch: arm64
+            runtime: win-arm64
+            name: MediaDownloader-Windows-arm64
+            ext: exe
           - os: ubuntu-latest
+            arch: x64
             runtime: linux-x64
             name: MediaDownloader-Linux-x64
             ext: deb
+          - os: ubuntu-latest
+            arch: arm64
+            runtime: linux-arm64
+            name: MediaDownloader-Linux-arm64
+            ext: deb
           - os: macos-latest
+            arch: x64
             runtime: osx-x64
             name: MediaDownloader-macOS-x64
             ext: pkg
           - os: macos-latest
+            arch: arm64
             runtime: osx-arm64
             name: MediaDownloader-macOS-arm64
             ext: pkg
@@ -49,7 +65,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       # ==========================================================
-      # PUBLISH
+      # PUBLISH .NET app (self-contained for the exact RID)
       # ==========================================================
       - name: Publish App
         run: |
@@ -63,78 +79,135 @@ jobs:
         shell: bash
 
       # ==========================================================
-      # Download yt-dlp + ffmpeg (Node moved to mac installer step)
+      # DOWNLOAD + PREPARE ALL TOOLS (yt-dlp + ffmpeg + deno)
+      # Fully matrix-aware → adding any new arch/OS only requires
+      # one new matrix row + one small if-branch (no rewrite)
       # ==========================================================
-      - name: Download Tools Binaries (yt-dlp + ffmpeg + Node for Win/Linux only)
+      - name: Download & Prepare Tools (yt-dlp + ffmpeg + deno)
         run: |
           mkdir -p publish/tools
-          echo "🛠️ Running on ${{ matrix.os }}"
+          echo "🛠️ Building for ${{ matrix.os }} / ${{ matrix.arch }} (runtime: ${{ matrix.runtime }})"
 
-          LATEST=$(curl -s https://nodejs.org/dist/latest/ | grep -oE 'node-v[0-9]+\.[0-9]+\.[0-9]+' | head -n1 | sed 's/node-v//')
-          echo "✅ Latest Node.js = v$LATEST"
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            # --------------------- WINDOWS ---------------------
+            # yt-dlp
+            if [[ "${{ matrix.arch }}" == "x64" ]]; then
+              curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe \
+                -o publish/tools/yt_dlp_win_x64.exe
+            else
+              curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_arm64.exe \
+                -o publish/tools/yt_dlp_win_arm64.exe
+            fi
 
-          # ================= WINDOWS =================
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            # ffmpeg
+            if [[ "${{ matrix.arch }}" == "x64" ]]; then
+              curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -o ffmpeg_win_x64.zip
+              unzip -q ffmpeg_win_x64.zip
+              cp ffmpeg-*/bin/ffmpeg.exe publish/tools/ffmpeg_win_x64.exe
+            else
+              # 7-Zip only needed for arm64
+              choco install 7zip -y --no-progress || true
+              curl -L https://github.com/tordona/ffmpeg-win-arm64/releases/download/latest/ffmpeg-master-latest-full-static-win-arm64.7z \
+                -o ffmpeg_win_arm64.7z
+              7z x ffmpeg_win_arm64.7z -oextracted -y >/dev/null 2>&1
+              # Robust extraction (works even if folder structure changes)
+              cp extracted/ffmpeg.exe publish/tools/ffmpeg_win_arm64.exe \
+                || cp extracted/bin/ffmpeg.exe publish/tools/ffmpeg_win_arm64.exe \
+                || find extracted -name 'ffmpeg*.exe' -exec cp {} publish/tools/ffmpeg_win_arm64.exe \; || true
+            fi
 
-            # yt_dlp Windows
-            curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -o publish/tools/yt_dlp_win_x64.exe
+            # deno
+            if [[ "${{ matrix.arch }}" == "x64" ]]; then
+              curl -L https://github.com/denoland/deno/releases/download/v2.7.7/deno-x86_64-pc-windows-msvc.zip -o deno_win_x64.zip
+              unzip -q deno_win_x64.zip
+              cp deno.exe publish/tools/deno_win_x64.exe
+            else
+              curl -L https://github.com/denoland/deno/releases/download/v2.7.7/deno-aarch64-pc-windows-msvc.zip -o deno_win_arm64.zip
+              unzip -q deno_win_arm64.zip
+              cp deno.exe publish/tools/deno_win_arm64.exe
+            fi
 
-            # ffmpeg Windows
-            curl -L https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -o ffmpeg_win_x64.zip
-            unzip -q ffmpeg_win_x64.zip
-            cp ffmpeg-*/bin/ffmpeg.exe publish/tools/ffmpeg_win_x64.exe
+          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            # --------------------- LINUX ---------------------
+            # yt-dlp
+            if [[ "${{ matrix.arch }}" == "x64" ]]; then
+              wget -q https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -O publish/tools/yt_dlp_linux_x64
+              chmod +x publish/tools/yt_dlp_linux_x64
+            else
+              wget -q https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64 -O publish/tools/yt_dlp_linux_arm64
+              chmod +x publish/tools/yt_dlp_linux_arm64
+            fi
 
-            # Deno Windows
-            curl -L https://github.com/denoland/deno/releases/download/v2.7.7/deno-x86_64-pc-windows-msvc.zip -o deno_win_x64.zip
-            unzip -q deno_win_x64.zip
-            cp deno.exe publish/tools/deno_win_x64.exe
+            # ffmpeg
+            if [[ "${{ matrix.arch }}" == "x64" ]]; then
+              curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg_linux_x64.tar.xz
+              tar -xf ffmpeg_linux_x64.tar.xz
+              cp ffmpeg-*-amd64-static/ffmpeg publish/tools/ffmpeg_linux_x64
+              chmod +x publish/tools/ffmpeg_linux_x64
+            else
+              curl -L https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz -o ffmpeg_linux_arm64.tar.xz
+              tar -xf ffmpeg_linux_arm64.tar.xz
+              # Super robust — works no matter how the tar changes in the future
+              FFMPEG_BIN=$(find . -name ffmpeg -type f ! -path '*/doc/*' | head -n1)
+              cp "$FFMPEG_BIN" publish/tools/ffmpeg_linux_arm64
+              chmod +x publish/tools/ffmpeg_linux_arm64
+            fi
 
-          # ================= LINUX =================
-          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            # deno
+            if [[ "${{ matrix.arch }}" == "x64" ]]; then
+              curl -L https://github.com/denoland/deno/releases/download/v2.7.7/deno-x86_64-unknown-linux-gnu.zip -o deno_linux_x64.zip
+              unzip -q deno_linux_x64.zip
+              cp deno publish/tools/deno_linux_x64
+              chmod +x publish/tools/deno_linux_x64
+            else
+              curl -L https://github.com/denoland/deno/releases/download/v2.7.7/deno-aarch64-unknown-linux-gnu.zip -o deno_linux_arm64.zip
+              unzip -q deno_linux_arm64.zip
+              cp deno publish/tools/deno_linux_arm64
+              chmod +x publish/tools/deno_linux_arm64
+            fi
 
-            # yt_dlp Linux
-            wget -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -O publish/tools/yt_dlp_linux_x64
-            chmod +x publish/tools/yt_dlp_linux_x64
-
-            # ffmpeg Linux
-            curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg_linux_x64.tar.xz
-            tar -xf ffmpeg_linux_x64.tar.xz
-            cp ffmpeg-*-amd64-static/ffmpeg publish/tools/ffmpeg_linux_x64
-            chmod +x publish/tools/ffmpeg_linux_x64
-
-            # Deno Linux
-            curl -L https://github.com/denoland/deno/releases/download/v2.7.7/deno-x86_64-unknown-linux-gnu.zip -o deno_linux_x64.zip
-            unzip -q deno_linux_x64.zip
-            cp deno publish/tools/deno_linux_x64
-            chmod +x publish/tools/deno_linux_x64
-
-            strip publish/tools/node || true
-            strip publish/tools/ffmpeg || true
-            strip publish/tools/yt-dlp || true
-
-          # ================= MACOS (only yt-dlp + universal ffmpeg) =================
-          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-
-            # yt_dlp MacOS
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            # --------------------- macOS (universal yt-dlp + ffmpeg) ---------------------
+            # yt-dlp (universal, works for both arch jobs)
             curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos -o publish/tools/yt_dlp_mac_universal
             chmod +x publish/tools/yt_dlp_mac_universal
 
-            # ffmpeg MacOS
+            # ffmpeg (universal)
             TMPDIR=$(mktemp -d)
             curl -L https://github.com/AR1Ablock/ffmpeg-macos-universal2/releases/download/latest/ffmpeg-universal-macos.zip -o "$TMPDIR/ffmpeg_mac_universal.zip"
             unzip -q "$TMPDIR/ffmpeg_mac_universal.zip" -d "$TMPDIR"
             mv "$TMPDIR/ffmpeg" publish/tools/ffmpeg_mac_universal
             chmod +x publish/tools/ffmpeg_mac_universal
-            echo "✅ yt-dlp_mac + ffmpeg_mac ready (Node will be added in packaging step)"
+
+            # deno (per-arch — exactly what the old mac step did)
+            if [[ "${{ matrix.arch }}" == "x64" ]]; then
+              DENO_URL="https://github.com/denoland/deno/releases/download/v2.7.7/deno-x86_64-apple-darwin.zip"
+              DENO_FILE="deno_mac_x64"
+            else
+              DENO_URL="https://github.com/denoland/deno/releases/download/v2.7.7/deno-aarch64-apple-darwin.zip"
+              DENO_FILE="deno_mac_arm64"
+            fi
+            curl -fL "$DENO_URL" -o deno_mac.zip
+            unzip -q deno_mac.zip
+            cp deno "publish/tools/${DENO_FILE}"
+            chmod +x "publish/tools/${DENO_FILE}"
           fi
+
+          # Common finalisation (works for every platform/arch)
+          chmod +x publish/tools/* 2>/dev/null || true
+          if [[ "${{ matrix.os }}" != "windows-latest" ]]; then
+            strip publish/tools/* 2>/dev/null || true
+          fi
+          echo "✅ yt-dlp + ffmpeg + deno ready for ${{ matrix.os }}-${{ matrix.arch }}"
         shell: bash
 
       # ==========================================================
-      # ==================== WINDOWS =============================
+      # WINDOWS INSTALLER
       # ==========================================================
       - name: Install Inno Setup
         if: matrix.os == 'windows-latest'
         run: choco install innosetup -y
+        shell: cmd
 
       - name: Build Windows Installer
         if: matrix.os == 'windows-latest'
@@ -147,7 +220,7 @@ jobs:
         shell: cmd
 
       # ==========================================================
-      # ==================== LINUX (.deb) ========================
+      # LINUX .deb (now fully supports arm64)
       # ==========================================================
       - name: Build Linux .deb
         if: matrix.os == 'ubuntu-latest'
@@ -164,63 +237,48 @@ jobs:
 
           mkdir -p package/lib/systemd/user
           cp Installers_Resources/mediadownloader.service package/lib/systemd/user/
-
           mkdir -p package/usr/share/applications
           cp Installers_Resources/mediadownloader.desktop package/usr/share/applications/
-
           mkdir -p package/usr/share/icons/hicolor/512x512/apps/
           cp publish/wwwroot/favicon.png package/usr/share/icons/hicolor/512x512/apps/mediadownloader.png
 
+          ARCH_DEB=amd64
+          [[ "${{ matrix.arch }}" == "arm64" ]] && ARCH_DEB=arm64
+
           fpm -s dir -t deb -n mediadownloader -v 1.0 \
+              --architecture $ARCH_DEB \
               --description "Universal Media Downloader" \
               --after-install Installers_Resources/postinst \
               -C package \
               .
 
-          mv mediadownloader_1.0_amd64.deb ${{ matrix.name }}.deb
+          mv mediadownloader_1.0_*.deb ${{ matrix.name }}.deb
         shell: bash
 
       # ==========================================================
-      # ==================== MacOS (.pkg) ========================
+      # macOS .pkg (deno already placed in tools step — no duplication)
       # ==========================================================
-      - name: Build macOS App + PKG (with correct deno only)
+      - name: Build macOS App + PKG
         if: matrix.os == 'macos-latest'
         run: |
-          # === Download + place ONLY the matching node for this build ===
-          echo "Run time is: ${{ matrix.runtime }}"
-          if [[ "${{ matrix.runtime }}" == *x64* ]]; then
-            Deno_URL="https://github.com/denoland/deno/releases/download/v2.7.7/deno-x86_64-apple-darwin.zip"
-            Deno_FILE="deno_mac_x64"
-            echo "📥 x64 build → downloading & placing ONLY deno_mac_x64"
-          else
-            Deno_URL="https://github.com/denoland/deno/releases/download/v2.7.7/deno-aarch64-apple-darwin.zip"
-            Deno_FILE="deno_mac_arm64"
-            echo "📥 arm64 build → downloading & placing ONLY deno_mac_arm64"
-          fi
-          curl -fL "$Deno_URL" -o deno_mac.zip
-          unzip -q deno_mac.zip
-          cp deno "publish/tools/${Deno_FILE}"
-          chmod +x publish/tools/${Deno_FILE}
-          echo "✅ Only ${Deno_FILE} added to tools/"
+          echo "📦 Building macOS .pkg for ${{ matrix.arch }} (all tools already in publish/tools)"
 
-          strip publish/tools/deno_mac_* || true
-          strip publish/tools/ffmpeg_mac || true
-          strip publish/tools/yt-dlp_mac || true
-
-          # === Now build the .app + .pkg (exactly your original) ===
           mkdir -p MediaDownloader.app/Contents/MacOS
           mkdir -p MediaDownloader.app/Contents/Resources
           cp -r publish/* MediaDownloader.app/Contents/MacOS/
           cp Installers_Resources/info.plist MediaDownloader.app/Contents/
           cp Installers_Resources/favicon.icns MediaDownloader.app/Contents/Resources/
+
           chmod +x MediaDownloader.app/Contents/MacOS/Downloader_Backend
           chmod +x MediaDownloader.app/Contents/MacOS/tools/* || true
+
           mkdir -p Payload/Applications
           cp -r MediaDownloader.app Payload/Applications/
           mkdir -p Scripts
           cp Installers_Resources/postinstall Scripts/
           cp Installers_Resources/com.mediadownloader.backend.plist Scripts/
           chmod +x Scripts/postinstall
+
           pkgbuild \
             --root Payload/Applications \
             --identifier com.mediadownloader.pkg \
@@ -236,11 +294,11 @@ jobs:
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}.${{ matrix.ext }}
-          
+
   release:
     needs: build
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/download-artifact@v4
         with:
