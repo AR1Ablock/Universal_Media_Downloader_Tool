@@ -183,30 +183,27 @@ jobs:
       # ==========================================================
       # ==================== MacOS (.pkg) ========================
       # ==========================================================
-      - name: Build macOS App + PKG (with correct node only)
+      - name: Build macOS App + PKG (with correct deno only)
         if: matrix.os == 'macos-latest'
         run: |
           # === Download + place ONLY the matching node for this build ===
-          LATEST=$(curl -s https://nodejs.org/dist/index.json | jq -r '.[0].version' | sed 's/v//')
           echo "Run time is: ${{ matrix.runtime }}"
           if [[ "${{ matrix.runtime }}" == *x64* ]]; then
-            NODE_URL="https://nodejs.org/dist/v${LATEST}/node-v${LATEST}-darwin-x64.tar.xz"
-            NODE_DIR="node-v${LATEST}-darwin-x64"
-            NODE_FILE="node_mac_x64"
-            echo "📥 x64 build → downloading & placing ONLY node_mac_x64"
+            Deno_URL="https://github.com/denoland/deno/releases/download/v2.7.7/deno-x86_64-apple-darwin.zip"
+            Deno_FILE="deno_mac_x64"
+            echo "📥 x64 build → downloading & placing ONLY deno_mac_x64"
           else
-            NODE_URL="https://nodejs.org/dist/v${LATEST}/node-v${LATEST}-darwin-arm64.tar.xz"
-            NODE_DIR="node-v${LATEST}-darwin-arm64"
-            NODE_FILE="node_mac_arm64"
-            echo "📥 arm64 build → downloading & placing ONLY node_mac_arm64"
+            Deno_URL="https://github.com/denoland/deno/releases/download/v2.7.7/deno-aarch64-apple-darwin.zip"
+            Deno_FILE="deno_mac_arm64"
+            echo "📥 arm64 build → downloading & placing ONLY deno_mac_arm64"
           fi
-          curl -fL "$NODE_URL" -o node.tar.xz
-          tar -xf node.tar.xz
-          cp "${NODE_DIR}/bin/node" "publish/tools/${NODE_FILE}"
-          chmod +x publish/tools/${NODE_FILE}
-          echo "✅ Only ${NODE_FILE} added to tools/"
+          curl -fL "$Deno_URL" -o deno_mac.zip
+          unzip -q deno_mac.zip
+          cp deno "publish/tools/${Deno_FILE}"
+          chmod +x publish/tools/${Deno_FILE}
+          echo "✅ Only ${Deno_FILE} added to tools/"
 
-          strip publish/tools/node_mac_* || true
+          strip publish/tools/deno_mac_* || true
           strip publish/tools/ffmpeg_mac || true
           strip publish/tools/yt-dlp_mac || true
 
