@@ -70,7 +70,7 @@ namespace Downloader_Backend.Model
 
     public class File_Saver
     {
-        public string File_Path { get; set;} = "";
+        public Dictionary<string, string> File_Path = [];
     }
 
 

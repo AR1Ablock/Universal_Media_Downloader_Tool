@@ -10,12 +10,13 @@ namespace Downloader_Backend.Logic
 
     [ApiController]
     [Route("[controller]")]
-    public partial class DownloaderController(DownloadTracker tracker, ILogger<DownloaderController> logger, IDownloadPersistence download_history, ProcessControl processControl, Utility utility, GlobalCancellationService globalCancellation, File_Saver file_Saver) : ControllerBase
+    public partial class DownloaderController(DownloadTracker tracker, ILogger<DownloaderController> logger, IDownloadPersistence download_history, ProcessControl processControl, Utility utility, GlobalCancellationService globalCancellation, File_Saver file_Saver, YT_Dlp_Strategy_Engine yt_Dlp_Strategy_Engine) : ControllerBase
     {
         private readonly DownloadTracker _tracker = tracker;
         private readonly ILogger<DownloaderController> _logger = logger;
         private readonly GlobalCancellationService _globalCancellation = globalCancellation;
         private readonly Utility _utility = utility;
+        private readonly YT_Dlp_Strategy_Engine _yt_Dlp_Strategy_Engine = yt_Dlp_Strategy_Engine;
         private readonly ProcessControl _processControl = processControl;
         private readonly IDownloadPersistence _download_history = download_history;
         private readonly File_Saver _fileSaver = file_Saver;
@@ -38,9 +39,7 @@ namespace Downloader_Backend.Logic
                     return BadRequest("Invalid URL provided.");
                 }
 
-                string[] basicArgs = ["-J", "--no-playlist", url];
-
-                var (success, output, error, loginRequired) = await _utility.TryRunYtDlpAsync(basicArgs, token);
+                var (success, output, error, loginRequired) = await _yt_Dlp_Strategy_Engine.Get_Formats_Helper(url, token);
 
                 if (!success)
                 {
@@ -58,8 +57,8 @@ namespace Downloader_Backend.Logic
                 string extractor = root.GetProperty("extractor_key").GetString()?.ToLower() ?? "";
 
                 List<Format> formats = extractor.Contains("facebook")
-                    ? await _utility.ParseFacebookFormats(root, req.Url, token)
-                    : await _utility.ParseStandardFormats(root, req.Url, token);
+                    ? await _utility.ParseFacebookFormats(root, req.Url, _yt_Dlp_Strategy_Engine, token)
+                    : await _utility.ParseStandardFormats(root, req.Url, _yt_Dlp_Strategy_Engine, token);
 
                 return Ok(formats);
             }
@@ -94,20 +93,27 @@ namespace Downloader_Backend.Logic
                     string rawTitle = "";
                     try
                     {
-                        if (!string.IsNullOrWhiteSpace(_fileSaver.File_Path))
+                        if (_fileSaver.File_Path.TryGetValue("Title_File", out string? Title_File))
                         {
-                            if (My_Files.Exists(_fileSaver.File_Path))
+                            if (!string.IsNullOrWhiteSpace(Title_File))
                             {
-                                string res = My_Files.ReadAllText(_fileSaver.File_Path);
-                                if (!string.IsNullOrWhiteSpace(res))
+                                if (My_Files.Exists(Title_File))
                                 {
-                                    rawTitle = res;
+                                    string res = My_Files.ReadAllText(Title_File);
+                                    if (!string.IsNullOrWhiteSpace(res))
+                                    {
+                                        rawTitle = res;
+                                    }
                                 }
                             }
                         }
 
                         if (string.IsNullOrWhiteSpace(rawTitle))
-                        rawTitle = await _utility.GetTitle(url, Token_Source.Token) ?? req.DownloadId;
+                            rawTitle = await _yt_Dlp_Strategy_Engine.GetTitle(url, Token_Source.Token) ?? req.DownloadId;
+                        {
+                            Title_File = Path.Combine(Utility.Create_Path(Making_Logs_Path: true), "temp_file_name.txt");
+                            My_Files.WriteAllText(Title_File, rawTitle);
+                        }
                     }
                     catch (OperationCanceledException)
                     {
@@ -134,7 +140,7 @@ namespace Downloader_Backend.Logic
                         TokenSource = Token_Source,
                     };
                     // await _download_history.Save_And_UpdateJobAsync(job); // save initial job state
-                    var result = await _utility.DownloadAsync(job, Token_Source.Token, _globalCancellation, _download_history, _tracker, false, false, false, false, Token_Key);
+                    var result = await _yt_Dlp_Strategy_Engine.DownloadAsync(job, Token_Source.Token, _globalCancellation, _download_history, _tracker, false, false, Token_Key);
                     return result;
                 }, Token_Source.Token);
 
@@ -164,7 +170,7 @@ namespace Downloader_Backend.Logic
                     });
                 }
 
-                if (System.IO.File.Exists(job.OutputPath))
+                if (My_Files.Exists(job.OutputPath))
                 {
                     string fileName = Path.GetFileName(job.OutputPath);
                     string contentType = "video/mp4";
@@ -217,7 +223,6 @@ namespace Downloader_Backend.Logic
         {
             try
             {
-
                 var jobs = _tracker.Jobs.ToList();
 
                 _globalCancellation.CancelAndDisposeAll();
@@ -324,7 +329,7 @@ namespace Downloader_Backend.Logic
 
             // 4) Kick off a fresh download
             //    restart=true will *not* pass --continue, so yt-dlp starts from scratch
-            return await _utility.DownloadAsync(job, Token_Source.Token, _globalCancellation, _download_history, _tracker, resume: false, restart: true, false, false, Token_Key);
+            return await _yt_Dlp_Strategy_Engine.DownloadAsync(job, Token_Source.Token, _globalCancellation, _download_history, _tracker, resume: false, restart: true, Token_Key);
         }
 
 
@@ -349,7 +354,7 @@ namespace Downloader_Backend.Logic
                 oldJob.TokenSource = Token_Source;
 
                 await Task.Delay(100, Token_Source.Token);
-                return await _utility.DownloadAsync(oldJob, Token_Source.Token, _globalCancellation, _download_history, _tracker, resume: true, false, false, false, Token_Key);
+                return await _yt_Dlp_Strategy_Engine.DownloadAsync(oldJob, Token_Source.Token, _globalCancellation, _download_history, _tracker, resume: true, restart: false, Token_Key);
             }
 
             return NotFound("Item not found.");
