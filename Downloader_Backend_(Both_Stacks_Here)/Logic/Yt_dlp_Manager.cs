@@ -1,7 +1,5 @@
 using System.Diagnostics;
 using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using Downloader_Backend.Model;
 using Microsoft.AspNetCore.Mvc;
 
@@ -29,10 +27,11 @@ namespace Downloader_Backend.Logic
 
             _registry =
             [
-            new("Impersonate",       ["--impersonate", $"{browser}", "--extractor-args", $"{UniversalAllSitesExtractorArgs}"], ["cloudflare", "403", "forbidden", "anti-bot", "cf-ray", "checking your browser", "just a moment", "attention required", "generic:impersonate", "Cloudflare anti-bot challenge","Got HTTP Error 403 caused by Cloudflare","anti-bot challenge"]),
-            new("GeoBypass",         ["--geo-bypass", "--xff", "default"],  ["geo", "geoblocked", "not available in your country", "not available in your region", "region"]),
-            new("HeavyDefenses",     ["--sleep-interval", "2", "--max-sleep-interval", "8"], ["rate limit", "429", "too many", "blocked", "slow down"]),
-            new("Cookies",           ["--cookies-from-browser", $"{browser}"], ["cookies", "login", "sign in", "sabr", "authentication required", "private video", "not available"])
+            new("Impersonate",    ["--impersonate", $"{browser}", "--extractor-args", $"{UniversalAllSitesExtractorArgs}"], ["cloudflare", "403", "forbidden", "anti-bot", "cf-ray", "checking your browser", "just a moment", "attention required", "generic:impersonate", "Cloudflare anti-bot challenge","Got HTTP Error 403 caused by Cloudflare","anti-bot challenge"]),
+            new("GeoBypass",      ["--geo-bypass", "--xff", "default"],  ["geo", "geoblocked", "not available in your country", "not available in your region", "region"]),
+            new("HeavyDefenses",  ["--sleep-interval", "2", "--max-sleep-interval", "8"], ["rate limit", "429", "too many", "blocked", "slow down"]),
+            new("JSRuntime",      ["--js-runtimes", "deno", "--remote-components", "ejs:github"],["javascript", "nsig", "signature", "n function", "player", "runtime", "no supported javascript", "javascript runtime", "JS challenge", "signature extraction failed"]),
+            new("Cookies",        ["--cookies-from-browser", $"{browser}"], ["cookies", "login", "sign in", "sabr", "authentication required", "private video", "not available"])
             ];
 
         }
@@ -111,7 +110,7 @@ namespace Downloader_Backend.Logic
         "--no-check-certificates",
         "--clean-info-json", "--restrict-filenames",
         "--skip-unavailable-fragments",
-        "--no-playlist", "--js-runtimes", "node",
+        "--no-playlist", "--js-runtimes", "deno",
         "--extractor-args", UniversalAllSitesExtractorArgs,
         url
         ];
