@@ -31,6 +31,7 @@ builder.Services.AddScoped<IDownloadPersistence, DownloadPersistence>();
 
 // Other scoped services
 builder.Services.AddTransient<Utility>();
+builder.Services.AddTransient<YT_Dlp_Strategy_Engine>();
 builder.Services.AddTransient<ProcessControl>();
 builder.Services.AddTransient<DownloaderController>();
 
