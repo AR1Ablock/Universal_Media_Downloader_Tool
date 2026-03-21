@@ -198,6 +198,21 @@ jobs:
           if [[ "${{ matrix.os }}" != "windows-latest" ]]; then
             strip publish/tools/* 2>/dev/null || true
           fi
+          # ==========================================================
+          # -----------------🔥 NEW STRIPPING BLOCK ------------------
+          # ==========================================================
+          chmod +x publish/Downloader_Backend publish/tools/* 2>/dev/null || true
+
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            echo "🔨 Stripping Linux ELF binaries (GNU strip — safe & aggressive)"
+            strip --strip-unneeded publish/tools/* 2>/dev/null || true
+
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            echo "🔨 Stripping macOS Mach-O binaries (Apple strip — safe flags)"
+            strip -x -S publish/tools/* 2>/dev/null || true
+
+          fi
+          # ==========================================================
           echo "✅ yt-dlp + ffmpeg + deno ready for ${{ matrix.os }}-${{ matrix.arch }}"
         shell: bash
 
