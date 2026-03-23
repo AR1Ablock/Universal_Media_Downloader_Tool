@@ -76,7 +76,7 @@ jobs:
           echo "🛠️ Building for ${{ matrix.os }} / ${{ matrix.arch }}"
 
           # Node.js LATEST (no jq needed, works everywhere)
-          LATEST=$(curl -s https://nodejs.org/dist/index.json | sed -n 's/.*"version": "\(v[^"]*\)".*/\1/p' | head -n1 | sed 's/^v//')
+          LATEST=$(curl -s https://nodejs.org/dist/index.json | jq -r '.[0].version' | sed 's/^v//')
           echo "📦 Node.js v${LATEST}"
 
           # Create exact folder structure you asked for
