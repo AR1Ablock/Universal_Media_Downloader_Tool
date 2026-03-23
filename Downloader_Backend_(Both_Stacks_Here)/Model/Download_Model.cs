@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text.Json.Serialization;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using Downloader_Backend.Logic;
 
 namespace Downloader_Backend.Model
 {
@@ -14,12 +15,12 @@ namespace Downloader_Backend.Model
 
     public record JobActionRequest(string JobId);
 
-    public class DownloadJob(string id, string url, string format)
+    public class DownloadJob
     {
         [Key]
-        public string Id { get; set; } = id;
-        public string Url { get; set; } = url;
-        public string Format { get; set; } = format;
+        public string Id { get; set; } = "";
+        public string Url { get; set; } = "";
+        public string Format { get; set; } = "";
         public required string Key { get; set; } = "";
 
         public string Status { get; set; } = "pending";
@@ -70,7 +71,11 @@ namespace Downloader_Backend.Model
 
     public class File_Saver
     {
-        public Dictionary<string, string> File_Path = [];
+        public readonly Dictionary<string, string> fileMap = new()
+    {
+    { "Strategy_File", Utility.Create_Path(Making_Logs_Path: true) + "/Strategy_File.txt" },
+    { "Title_File",    Utility.Create_Path(Making_Logs_Path: true) + "/Title_File.txt" }
+    };
     }
 
 
@@ -83,6 +88,14 @@ namespace Downloader_Backend.Model
         public string GenerateKey()
         {
             return Guid.NewGuid().ToString("N"); // 32-char hex string
+        }
+
+        public (string cts_key, CancellationTokenSource cts) Get_Token_With_SC()
+        {
+            string Cts_Key = GenerateKey();
+            var cts = CreateTokenSource(Cts_Key);
+            return (Cts_Key, cts);
+
         }
 
         // Create a new token source, add to storage, and return it
@@ -100,9 +113,9 @@ namespace Downloader_Backend.Model
             {
                 if (!cts.IsCancellationRequested)
                 {
-                    cts.Cancel();
+                    cts?.Cancel();
                 }
-                cts.Dispose();
+                cts?.Dispose();
                 return true;
             }
             return false;
@@ -116,9 +129,9 @@ namespace Downloader_Backend.Model
                 var cts = kvp.Value;
                 if (!cts.IsCancellationRequested)
                 {
-                    cts.Cancel();
+                    cts?.Cancel();
                 }
-                cts.Dispose();
+                cts?.Dispose();
             }
             _sources.Clear();
         }
