@@ -11,7 +11,7 @@ namespace Downloader_Backend.Logic
         private readonly Utility _utility;
         private readonly ILogger<Utility> _logger;
         private readonly File_Saver _fileSaver;
-        public sealed record YtDlpStrategyComponent(string Name, List<string> Arguments, List<string> ErrorTriggers);
+        private sealed record YtDlpStrategyComponent(string Name, List<string> Arguments, List<string> ErrorTriggers);
         private readonly List<YtDlpStrategyComponent> _registry;
 
         public YT_Dlp_Strategy_Engine(ILogger<Utility> logger, ProcessControl processControl, File_Saver file_Saver, Utility utility)
@@ -24,19 +24,20 @@ namespace Downloader_Backend.Logic
 
 
             string browser = _utility.GetYtDlpCompatibleBrowser() ?? "chrome";
+            string deno_bin = _utility.Local_Executables_Path().deno;
 
             _registry =
             [
             new("Impersonate",    ["--impersonate", $"{browser}", "--extractor-args", $"{UniversalAllSitesExtractorArgs}"], ["cloudflare", "403", "forbidden", "anti-bot", "cf-ray", "checking your browser", "just a moment", "attention required", "generic:impersonate", "Cloudflare anti-bot challenge","Got HTTP Error 403 caused by Cloudflare","anti-bot challenge"]),
-            new("GeoBypass",      ["--geo-bypass", "--xff", "default"],  ["geo", "geoblocked", "not available in your country", "not available in your region", "region"]),
+            new("GeoBypass",      ["--geo-bypass", "--xff", "default"],  ["geo", "geoblocked", "not available in your country", "not available in your region", "region", "country", "not supported in your country", "not supported in your region"]),
             new("HeavyDefenses",  ["--sleep-interval", "2", "--max-sleep-interval", "8"], ["rate limit", "429", "too many", "blocked", "slow down"]),
-            new("JSRuntime",      ["--js-runtimes", "deno", "--remote-components", "ejs:github"],["javascript", "nsig", "signature", "n function", "player", "runtime", "no supported javascript", "javascript runtime", "JS challenge", "signature extraction failed"]),
-            new("Cookies",        ["--cookies-from-browser", $"{browser}"], ["cookies", "login", "sign in", "sabr", "authentication required", "private video", "not available"])
+            new("Cookies",        ["--cookies-from-browser", $"{browser}"], ["cookies", "login", "sign in", "sabr", "authentication required", "private video", "not available"]),
+            new("JSRuntime",      ["--no-js-runtimes", "--js-runtimes", $"{deno_bin}", "--remote-components", "ejs:github"],["javascript", "nsig", "signature", "n function", "player", "runtime", "no supported javascript", "javascript runtime", "JS challenge", "signature extraction failed"]),
             ];
 
         }
 
-        const string UniversalAllSitesExtractorArgs =
+        private const string UniversalAllSitesExtractorArgs =
         "generic:impersonate,prefer_ffmpeg,fragment_query,variant_query,hls_key=;" +          // generic fallback + HLS fixes + ffmpeg success
         "youtube:player_client=android,web,mweb,ios,tv,web_embedded;formats=incomplete;player_skip=js,configs,webpage;use_ad_playback_context=true;po_token=web.gvs+;webpage_client=web;skip=hls,dash;" +  // BEST YouTube success combo (multi-client fallback + more formats + skip blocks + PO/ad bypass)
         "youtubetab:skip=webpage;" +                                                          // faster playlist/channel fetch (avoids timeout failures)
@@ -52,14 +53,14 @@ namespace Downloader_Backend.Logic
 
 
         // Triggers
-        public readonly string[] CookieTriggers =
+        private readonly string[] CookieTriggers =
         [
         "cookies", "login", "429", "too many requests", "rate limit",
         "sabr", "sign in", "log in", "authentication required"
         ];
 
 
-        public readonly string[] ImpersonateTriggers =
+        private readonly string[] ImpersonateTriggers =
         [
         "Cloudflare anti-bot challenge",
         "Got HTTP Error 403 caused by Cloudflare",
@@ -73,7 +74,7 @@ namespace Downloader_Backend.Logic
         ];
 
 
-        public readonly string[] PermanentErrorTriggers =
+        private readonly string[] PermanentErrorTriggers =
         [
         "video unavailable",
         "this video is unavailable",
@@ -95,62 +96,86 @@ namespace Downloader_Backend.Logic
         "age gate"
         ];
 
-
-
-
-        private static List<string> GetBaseArgs(string url)
-        {
-            return
+        private readonly string[] Http_File_not_Found_Trigger =
         [
-        "--ignore-errors", "--no-warnings",
-        "--allow-dynamic-mpd", "--check-formats",
-        "--extractor-retries", "15",
-        "--retries", "10",
-        "--socket-timeout", "15",
-        "--no-check-certificates",
-        "--clean-info-json", "--restrict-filenames",
-        "--skip-unavailable-fragments",
-        "--no-playlist", "--js-runtimes", "deno",
-        "--extractor-args", UniversalAllSitesExtractorArgs,
-        url
+        "HTTP Error 416",
+        "Error 416",
+        "Requested range not satisfiable",
         ];
+
+
+
+
+        private List<string> GetBaseArgs()
+        {
+            // Defined once here so all three methods inherit the correct runtime path
+            var (_, ffmpeg_bin, _, node_bin) = _utility.Local_Executables_Path();
+
+            return [
+            "--ignore-errors",
+            "--no-warnings",
+            "--allow-dynamic-mpd",
+            "--extractor-retries", "15",
+            "--retries", "10",
+            "--socket-timeout", "15",
+            "--no-check-certificates",
+            "--restrict-filenames",
+            "--skip-unavailable-fragments",
+            "--no-playlist",
+            "--ffmpeg-location", ffmpeg_bin,
+            "--no-js-runtimes",
+            "--js-runtimes", $"node:{node_bin}", // Injected into base
+            // "--extractor-args", UniversalAllSitesExtractorArgs
+            ];
         }
 
-
-        private static List<string> GetFormatArgs(string url)
+        private List<string> GetFormatArgs(string url)
         {
-            var args = GetBaseArgs(url);
-            args.Insert(args.Count - 2, "-J"); // insert before the URL
+            var args = GetBaseArgs();
+
+            args.AddRange([
+            "--clean-info-json",
+            "--check-formats",
+            "-J",
+            url
+            ]);
+
+            return args;
+        }
+
+        private List<string> GetTitleArgs(string url)
+        {
+            var args = GetBaseArgs();
+
+            args.AddRange([
+            "--print", "title",
+            "--playlist-items", "1",
+            url
+            ]);
+
             return args;
         }
 
 
-        private static List<string> GetTitleArgs(string url)
+        private List<string> BuildDownloadBaseArguments(DownloadJob job, string outputFile)
         {
-            var args = GetBaseArgs(url);
-            args.Insert(args.Count - 2, "--print");
-            args.Insert(args.Count - 2, "title");
-            args.Insert(args.Count - 2, "--playlist-items");
-            args.Insert(args.Count - 2, "1");
+            var args = GetBaseArgs();
+
+            args.AddRange([
+                "--concurrent-fragments", "4",
+                "--http-chunk-size", "10M",
+                "-f", job.Format,
+                "--merge-output-format", "mp4",
+                "-o", outputFile,
+                "--progress-template", "prog:%(progress._percent_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s|%(progress._speed_str)s",
+                "--newline",
+                job.Url
+            ]);
+
             return args;
         }
 
-
-        private List<string> BuildDownloadBaseArguments(DownloadJob job, string outputFile) =>
-        [
-        "--js-runtimes", "node",
-        "--concurrent-fragments", "4",
-        "--http-chunk-size", "10M",
-        "-f", job.Format,
-        "--merge-output-format", "mp4",
-        "-o", outputFile,
-        "--progress-template", "prog:%(progress._percent_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s|%(progress._speed_str)s",
-        "--newline",
-        job.Url
-        ];
-
-
-        // PURE decision - NO yt-dlp execution - used by download cache logic
+        // PURE decision - NO yt-dlp execution - used by All executioner methods 
         private (List<string> FinalArguments, string StrategyChain) ComputeCumulativeStrategyArguments(List<string> baseArguments, string lastNormalizedError, List<string> alreadyAppliedStrategies, bool allowCookiesAsLastResort)
         {
             var accumulated = new List<string>(baseArguments);
@@ -189,12 +214,12 @@ namespace Downloader_Backend.Logic
                 return (accumulated.ToList(), string.Join(" → ", chain));
             }
 
-            return (accumulated.ToList(), "Vanilla (no escalation needed)");
+            return (accumulated.ToList(), "no escalation needed");
         }
 
 
 
-        // Full execution (used only by GetTitle + ExtractMediaInfo)
+        // (Executioner method used by GetTitle + ExtractMediaInfo)
         private async Task<(bool Success, string StdOut, string StdErr, string StrategyChain)> ExecuteWithFullAdaptiveEscalationAsync(List<string> baseArguments, CancellationToken ct, bool allowCookies = true)
         {
             bool Success = false;
@@ -225,27 +250,32 @@ namespace Downloader_Backend.Logic
 
                 return (false, "", $"All paths exhausted: {StdErr}", string.Join(" → ", chainLog));
             }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogError("Get format / Title Cancelled By User and cancelation token get fired {ex}", ex.Message);
+                return (false, "", StdErr + "Operation got Cancelled", "");
+                throw;
+            }
             catch (Exception ex)
             {
-                string error = $"Error happened in format fetching method {ex.Message}";
+                string error = $"Error happened in format fetching executioner {ex.Message}";
                 _logger.LogError("{failed}", error);
-                return (false, "", error, error);
+                return (false, "", error, "");
             }
         }
 
 
 
-        // DRY core process (unchanged from previous, kept for title/formats)
+        // DRY core process (Core executioner, for title / formats)
         private async Task<(bool Success, string StdOut, string StdErr)> ExecuteYtDlpProcessCoreAsync(List<string> args, CancellationToken ct)
         {
             Process? proc = null;
             try
             {
 
-                var (ytDlpPath, _, nodePath) = _utility.Local_Executables_Path();
+                var (ytDlpPath, _, _, _) = _utility.Local_Executables_Path();
                 var psi = new ProcessStartInfo()
                 {
-                    Environment = { ["PATH"] = $"{nodePath}{Path.PathSeparator}{Environment.GetEnvironmentVariable("PATH")}" },
                     FileName = ytDlpPath,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -268,9 +298,18 @@ namespace Downloader_Backend.Logic
                 _logger.LogError("Get format / Title Cancelled By User and cancelation token get fired {ex}", ex.Message);
                 throw;
             }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error occurd in Get format / Title method {ex}", ex.Message);
+                throw;
+            }
             finally
             {
-                _utility.SafeKillProcessTree(proc);   // your existing helper
+                if (_processControl.TryGetPid(proc, out var pid))
+                {
+                    var tree = _processControl.GetProcessTree(pid);
+                    _processControl.KillProcessTree(tree);
+                }
                 if (proc != null && proc.HasExited) proc?.Dispose();
             }
         }
@@ -279,17 +318,25 @@ namespace Downloader_Backend.Logic
         // =============== GET TITLE (adaptive + title cache) ===============
         public async Task<string?> GetTitle(string mediaUrl, CancellationToken cancellationToken)
         {
-            var baseArgs = GetTitleArgs(mediaUrl);
-
-            var (success, stdout, _, chain) = await ExecuteWithFullAdaptiveEscalationAsync(baseArgs, cancellationToken, allowCookies: true);
-
-            if (success && !string.IsNullOrWhiteSpace(stdout))
+            try
             {
-                _logger.LogInformation("Title success | Chain: {Chain}", chain);
-                return stdout.Trim();
+                var baseArgs = GetTitleArgs(mediaUrl);
+
+                var (success, stdout, _, chain) = await ExecuteWithFullAdaptiveEscalationAsync(baseArgs, cancellationToken, allowCookies: true);
+
+                if (success && !string.IsNullOrWhiteSpace(stdout))
+                {
+                    _logger.LogInformation("Title success | Chain: {Chain}", chain);
+                    return stdout.Trim();
+                }
+                _logger.LogWarning("Title failed | Chain: {Chain}", chain);
+                return null;
             }
-            _logger.LogWarning("Title failed | Chain: {Chain}", chain);
-            return null;
+            catch (Exception ex)
+            {
+                _logger.LogWarning("error occured in title method: {Chain}", ex.Message);
+                return null;
+            }
         }
 
 
@@ -297,207 +344,253 @@ namespace Downloader_Backend.Logic
         // =============== FORMATS / INFO (adaptive + persist chain + title) ===============
         public async Task<(bool Success, string stdOut, string stdErr, bool loginRequired)> Get_Formats_Helper(string url, CancellationToken ct)
         {
-            var baseArgs = GetFormatArgs(url);
-            // make a cache of url so if same url then try with stored strategy file
-
-            var (success, stdOut, stdErr, chain) = await ExecuteWithFullAdaptiveEscalationAsync(baseArgs, ct, allowCookies: true);
-
-            bool loginRequired = CookieTriggers.Any(trigger => stdErr.Contains(trigger, StringComparison.OrdinalIgnoreCase));
-
-            if (success)
+            bool success = false;
+            bool loginRequired = false;
+            string stdOut = "";
+            string stdErr = "";
+            string chain = "";
+            var cache_args = "";
+            try
             {
-                if (!string.IsNullOrEmpty(chain))
+                var baseArgs = GetFormatArgs(url);
+
+
+                if (_fileSaver.fileMap.TryGetValue("Strategy_File", out string? Strategy_File))
+                    if (!string.IsNullOrWhiteSpace(Strategy_File))
+                    {
+                        if (File.Exists(Strategy_File))
+                        {
+                            string res = File.ReadAllText(Strategy_File);
+                            if (!string.IsNullOrWhiteSpace(res))
+                            {
+                                var stored_url = res.Split(',')[0];
+                                if (stored_url == url)
+                                    cache_args = res;
+                            }
+                        }
+                    }
+
+                if (!string.IsNullOrWhiteSpace(cache_args))
                 {
-                    _fileSaver.File_Path["Strategy_File"] = Path.Combine(Utility.Create_Path(Making_Logs_Path: true), "temp_file_strtegy.txt");
-                    File.WriteAllText(_fileSaver.File_Path["Strategy_File"], chain);
+                    var cachedArg = RebuildArgumentsFromChain(baseArgs, cache_args);
+                    (success, stdOut, stdErr, chain) = await ExecuteWithFullAdaptiveEscalationAsync(cachedArg, ct, allowCookies: true);
                 }
-                _logger.LogInformation("Media info extracted with chain: {Chain}", chain);
-                return (true, stdOut, stdErr, false);
-            }
+                else
+                {
+                    (success, stdOut, stdErr, chain) = await ExecuteWithFullAdaptiveEscalationAsync(baseArgs, ct, allowCookies: true);
+                }
 
-            if (PermanentErrorTriggers.Any(trigger => stdErr.Contains(trigger, StringComparison.OrdinalIgnoreCase)))
+
+                loginRequired = CookieTriggers.Any(trigger => stdErr.Contains(trigger, StringComparison.OrdinalIgnoreCase));
+
+                if (success)
+                {
+                    if (!string.IsNullOrEmpty(chain))
+                    {
+                        Path.Combine(_fileSaver.fileMap["Strategy_File"], "Strategy_File.txt");
+                        string cache_to_write = $"{url}, {chain}";
+                        File.WriteAllText(_fileSaver.fileMap["Strategy_File"], cache_to_write);
+                    }
+                    _logger.LogInformation("Media info extracted with chain: {Chain}", chain);
+                    return (true, stdOut, stdErr, false);
+                }
+
+                if (PermanentErrorTriggers.Any(trigger => stdErr.Contains(trigger, StringComparison.OrdinalIgnoreCase)))
+                {
+                    throw new InvalidOperationException("MEDIA_PERMANENT_ERROR: This media is permanently unavailable, private, age-restricted, or geo-blocked.");
+                }
+
+                _logger.LogWarning("Media info extraction failed after full escalation chain: {Chain}", chain);
+                return (false, stdOut, stdErr, loginRequired);
+            }
+            catch (OperationCanceledException ex)
             {
-                throw new InvalidOperationException("MEDIA_PERMANENT_ERROR: This media is permanently unavailable, private, age-restricted, or geo-blocked.");
+                _logger.LogWarning("error occured due to token get canceled Get format executioner method {ex}", ex.Message);
+                return (false, stdOut, stdErr, loginRequired);
+                throw;
             }
-
-            _logger.LogWarning("Media info extraction failed after full escalation chain: {Chain}", chain);
-            return (false, stdOut, stdErr, loginRequired);
+            catch (Exception ex)
+            {
+                _logger.LogWarning("error occured in Get format executioner method {ex}", ex.Message);
+                return (false, stdOut, stdErr, loginRequired);
+            }
         }
+
 
 
         /* Download Logic */
-
         public async Task<IActionResult> DownloadAsync(DownloadJob job, CancellationToken linkedToken, GlobalCancellationService _globalCancellation, IDownloadPersistence _download_history, DownloadTracker _tracker, bool resume = false, bool restart = false, string Token_Key = "")
         {
-            string videoPath = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
-            string downloadsFolder = Path.Combine(videoPath, "Dlp_downloads");
-            Directory.CreateDirectory(downloadsFolder);
-
-            var outputFile = Path.Combine(downloadsFolder, $"{job.Id}___{job.Title}.mp4");
-            var (ytDlpPath, ffmpegPath, nodePath) = _utility.Local_Executables_Path();
-
-            linkedToken.Register(() =>
+            try
             {
-                job.Status = "canceled";
-                job.ErrorLog += "[INFO] Job canceled by user.\n";
-                _logger.LogInformation("User Cancel the job: {req}", linkedToken.IsCancellationRequested);
-            });
+                string videoPath = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
+                string downloadsFolder = Path.Combine(videoPath, "Dlp_downloads");
+                Directory.CreateDirectory(downloadsFolder);
 
-            // Fire and forget - main method stays super clean
-            job.DownloadTask = Task.Run(async () =>
+                var outputFile = Path.Combine(downloadsFolder, $"{job.Id}___{job.Title}.mp4");
+
+                linkedToken.Register(() =>
+                {
+                    job.Status = "canceled";
+                    job.ErrorLog += "[INFO] Job canceled by user.\n";
+                    _logger.LogInformation("User Cancel the job: {req}", linkedToken.IsCancellationRequested);
+                });
+
+                // Fire and forget - main method
+                job.DownloadTask = Task.Run(async () =>
+                {
+                    await ExecuteDownloadWithFullAdaptiveOrCachedAsync(job, linkedToken, _globalCancellation, _download_history, _tracker, resume, restart, Token_Key, outputFile);
+                }, linkedToken);
+
+                return new OkObjectResult(new { jobId = job.Id, title = job.Title });
+
+            }
+            catch (Exception ex)
             {
-                await ExecuteDownloadWithFullAdaptiveOrCachedAsync(
-                    job,
-                    linkedToken,
-                    _globalCancellation,
-                    _download_history,
-                    _tracker,
-                    resume,
-                    restart,
-                    Token_Key,
-                    outputFile,
-                    ytDlpPath,
-                    ffmpegPath,
-                    nodePath);
-            }, linkedToken);
-
-            return new OkObjectResult(new { jobId = job.Id, title = job.Title });
+                _logger.LogError("en error occured in main downlaod method {ex}", ex);
+                throw;
+            }
         }
 
 
-        private async Task ExecuteDownloadWithFullAdaptiveOrCachedAsync(
-            DownloadJob job,
-            CancellationToken linkedToken,
-            GlobalCancellationService globalCancellation,
-            IDownloadPersistence history,
-            DownloadTracker tracker,
-            bool resumeRequested,
-            bool restartRequested,
-            string tokenKey,
-            string outputFile,
-            string ytDlpPath,
-            string ffmpegPath,
-            string nodePath)
+        private async Task ExecuteDownloadWithFullAdaptiveOrCachedAsync(DownloadJob job, CancellationToken linkedToken, GlobalCancellationService globalCancellation, IDownloadPersistence history, DownloadTracker tracker, bool resumeRequested, bool restartRequested, string tokenKey, string outputFile)
         {
-            job.ErrorLog = string.Empty;
-            string cachedChain = "";
-            List<string> escalatedArgs = [];
-            string chainName = "";
+            try
+            {
+                job.ErrorLog = string.Empty;
+                string cachedChain = "";
+                List<string> escalatedArgs = [];
+                string chainName = "";
 
-            if (_fileSaver.File_Path.TryGetValue("Strategy_File", out string? Strategy_File))
-                if (!string.IsNullOrWhiteSpace(Strategy_File))
-                {
-                    if (File.Exists(Strategy_File))
+                if (_fileSaver.fileMap.TryGetValue("Strategy_File", out string? Strategy_File))
+                    if (!string.IsNullOrWhiteSpace(Strategy_File))
                     {
-                        string res = File.ReadAllText(Strategy_File);
-                        if (!string.IsNullOrWhiteSpace(res))
+                        if (File.Exists(Strategy_File))
                         {
-                            cachedChain = res;
+                            string res = File.ReadAllText(Strategy_File);
+                            if (!string.IsNullOrWhiteSpace(res))
+                            {
+                                var url = res.Split(',')[0];
+                                if (url == job.Url)
+                                    cachedChain = res;
+                            }
+                        }
+                    }
+
+                bool cacheExists = !string.IsNullOrWhiteSpace(cachedChain);
+
+                var baseArgs = BuildDownloadBaseArguments(job, outputFile);
+                bool overallSuccess = false;
+
+                if (cacheExists)
+                {
+                    job.ErrorLog += $"\n=== CACHE HIT → using saved chain: {cachedChain} ===\n";
+                    job.Status = "using_cached_strategy";
+
+                    /*                     await history.Save_And_UpdateJobAsync(job); */
+
+                    var cachedFullArgs = RebuildArgumentsFromChain(baseArgs, cachedChain);
+                    overallSuccess = await ExecuteSingleAttemptAsync(job, linkedToken, globalCancellation, history, tracker, cachedFullArgs, resumeRequested, restartRequested, outputFile, tokenKey);
+                }
+
+                if (!overallSuccess) // cache miss OR cached attempt failed
+                {
+                    if (!cacheExists)
+                        job.ErrorLog += "\n=== NO CACHE → starting full adaptive escalation ===\n";
+                    else
+                        job.ErrorLog += "\n=== CACHED ATTEMPT FAILED → falling back to full adaptive ===\n";
+
+                    var applied = new List<string>();
+                    for (int attempt = 0; attempt <= _registry.Count && !overallSuccess; attempt++)
+                    {
+                        var errorForDecision = job.ErrorLog.ToLowerInvariant();
+
+                        if (Http_File_not_Found_Trigger.Any(e => job.ErrorLog.Contains(e, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            _logger.LogError("File not same, cant write media data on different media file, error 416");
+                            break;
+                        }
+
+                        if (!cacheExists && attempt == 0)
+                            escalatedArgs.AddRange(baseArgs); // start with base arg 
+                        else
+                            (escalatedArgs, chainName) = ComputeCumulativeStrategyArguments(baseArgs, errorForDecision, applied, allowCookiesAsLastResort: true);
+
+
+                        job.ErrorLog += $"\n=== ATTEMPT {attempt}/7 → {chainName} ===\n";
+                        job.Status = $"attempting ({chainName})";
+                        /*                         await history.Save_And_UpdateJobAsync(job); */
+
+                        bool successThisAttempt = await ExecuteSingleAttemptAsync(job, linkedToken, globalCancellation, history, tracker, escalatedArgs, resumeRequested, restartRequested, outputFile, tokenKey);
+
+                        if (successThisAttempt)
+                        {
+                            overallSuccess = true;
+                            job.Status = "completed";
+                            await history.Save_And_UpdateJobAsync(job);
+                        }
+                        else
+                        {
+                            if (!string.IsNullOrWhiteSpace(chainName))
+                                applied.Add(chainName.Split(' ')[0]);
                         }
                     }
                 }
 
-            bool cacheExists = !string.IsNullOrWhiteSpace(cachedChain);
-
-            var baseArgs = BuildDownloadBaseArguments(job, outputFile);
-            bool overallSuccess = false;
-
-            if (cacheExists)
-            {
-                job.ErrorLog += $"\n=== CACHE HIT → using saved chain: {cachedChain} ===\n";
-                job.Status = "using_cached_strategy";
-                await history.Save_And_UpdateJobAsync(job);
-
-                var cachedFullArgs = RebuildArgumentsFromChain(baseArgs, cachedChain);
-                overallSuccess = await ExecuteSingleAttemptAsync(
-                    job, linkedToken, globalCancellation, history, tracker,
-                    cachedFullArgs, resumeRequested, restartRequested, outputFile,
-                    ytDlpPath, ffmpegPath, nodePath, tokenKey);
-            }
-
-            if (!overallSuccess) // cache miss OR cached attempt failed
-            {
-                if (!cacheExists)
-                    job.ErrorLog += "\n=== NO CACHE → starting full adaptive escalation ===\n";
-                else
-                    job.ErrorLog += "\n=== CACHED ATTEMPT FAILED → falling back to full adaptive ===\n";
-
-                var applied = new List<string>();
-                for (int attempt = 0; attempt <= _registry.Count && !overallSuccess; attempt++)
+                if (!overallSuccess)
                 {
-                    var errorForDecision = job.ErrorLog.ToLowerInvariant();
-                    if (cacheExists && attempt == 0) (escalatedArgs, chainName) = ComputeCumulativeStrategyArguments(baseArgs, errorForDecision, applied, allowCookiesAsLastResort: true);
-
-                    job.ErrorLog += $"\n=== ATTEMPT {attempt}/7 → {chainName} ===\n";
-                    job.Status = $"attempting ({chainName})";
+                    job.Status = "failed";
+                    if (File.Exists(Strategy_File)) File.Delete(Strategy_File);
                     await history.Save_And_UpdateJobAsync(job);
-
-                    bool successThisAttempt = await ExecuteSingleAttemptAsync(
-                        job, linkedToken, globalCancellation, history, tracker,
-                        escalatedArgs, resumeRequested && attempt == 1, restartRequested && attempt == 1,
-                        outputFile, ytDlpPath, ffmpegPath, nodePath, tokenKey);
-
-                    if (successThisAttempt)
-                    {
-                        overallSuccess = true;
-                        job.Status = "completed";
-                        await history.Save_And_UpdateJobAsync(job);
-                    }
-                    else
-                    {
-                        (escalatedArgs, chainName) = ComputeCumulativeStrategyArguments(baseArgs, errorForDecision, applied, allowCookiesAsLastResort: true);
-                        applied.Add(chainName.Split(' ')[0]);
-                    }
+                    _logger.LogInformation("Download {JobId} exhausted all options", job.Id);
                 }
             }
-
-            if (!overallSuccess)
+            catch (OperationCanceledException ex)
             {
-                job.Status = "failed";
-                if (File.Exists(Strategy_File)) File.Delete(Strategy_File);
-                await history.Save_And_UpdateJobAsync(job);
-                _logger.LogInformation("Download {JobId} exhausted all options", job.Id);
+                _logger.LogError("Download caller Cancelled By User and cancelation token get fired helper {ex}", ex.Message);
+                job.ErrorLog += "[INFO] Attempt canceled by user.\n";
+                job.Status = "canceled";
+                throw;
             }
-
-            globalCancellation.RemoveTokenSource(tokenKey);
-            job.DownloadTask = null;
+            catch (Exception ex)
+            {
+                _logger.LogError("Downloading caller error occured: {er}", ex.Message);
+                job.ErrorLog += $"[EXCEPTION] {ex.Message}\n";
+                job.Status = "error occured";
+            }
+            finally
+            {
+                globalCancellation.RemoveTokenSource(tokenKey);
+                job.DownloadTask = null;
+            }
         }
+
 
 
         private List<string> RebuildArgumentsFromChain(List<string> baseArgs, string chain)
         {
             var full = baseArgs.ToList();
-            var parts = chain.Split([" → "], StringSplitOptions.RemoveEmptyEntries);
+            string url_freed = chain.Split(", ")[1];
+            var parts = url_freed.Split([" → "], StringSplitOptions.RemoveEmptyEntries);
             foreach (var part in parts)
             {
-                var clean = part.Replace("(fallback)", "").Replace("(last resort)", "").Trim();
+                string clean = part.Replace("(fallback)", "").Replace("(last resort)", "").Trim();
                 var component = _registry.FirstOrDefault(record => record.Name == clean); // access via friend or expose getter
                 component?.Arguments.ForEach(full.Add);
             }
+
             return full;
         }
 
 
-        private async Task<bool> ExecuteSingleAttemptAsync(
-            DownloadJob job,
-            CancellationToken linkedToken,
-            GlobalCancellationService _globalCancellation,
-            IDownloadPersistence _download_history,
-            DownloadTracker _tracker,
-            List<string> fullArgs,
-            bool applyResume,
-            bool applyRestart,
-            string outputFile,
-            string ytDlpPath,
-            string ffmpegPath,
-            string nodePath,
-            string Token_Key)
+
+        private async Task<bool> ExecuteSingleAttemptAsync(DownloadJob job, CancellationToken linkedToken, GlobalCancellationService _globalCancellation, IDownloadPersistence _download_history, DownloadTracker _tracker, List<string> fullArgs, bool applyResume, bool applyRestart, string outputFile, string Token_Key)
         {
 
+            string ytDlpPath = _utility.Local_Executables_Path().ytDlp;
             var psi = new ProcessStartInfo
             {
                 FileName = ytDlpPath,
-                Environment = { ["FFMPEG"] = ffmpegPath, ["PATH"] = $"{nodePath}{Path.PathSeparator}{Environment.GetEnvironmentVariable("PATH")}" },
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -593,9 +686,9 @@ namespace Downloader_Backend.Logic
             }
             catch (Exception ex)
             {
-                _logger.LogError("Downloading error occured 2: {er}", ex.Message);
+                _logger.LogError("Downloading error occured: {er}", ex.Message);
                 job.ErrorLog += $"[EXCEPTION] {ex.Message}\n";
-                job.Status = "failed-ct";
+                job.Status = "error occured";
                 return false;
             }
             finally

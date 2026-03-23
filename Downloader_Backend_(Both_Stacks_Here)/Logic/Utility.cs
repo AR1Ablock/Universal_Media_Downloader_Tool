@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Downloader_Backend.Model;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Spectre.Console;
 
 namespace Downloader_Backend.Logic
@@ -72,15 +73,53 @@ namespace Downloader_Backend.Logic
             {
                 Dir_Path = Path.Combine(Dir_Path, "Downloads.db");
             }
-
             return Dir_Path;
         }
+
+
+        public DownloadJob Create_Download_Job(DownloadJob job, string status, string Method_Caller, CancellationTokenSource cts)
+        {
+            bool Is_From_Restart = Method_Caller == "Restart";
+            bool Is_From_Broken_Resume = Method_Caller == "Broken_Resume";
+            //
+            long Downloaded_Size = Is_From_Restart ? 0 : job.Downloaded;
+            double Progress = Is_From_Restart ? 0 : job.Progress;
+            string Speed = Is_From_Restart ? "0 B" : job.Speed;
+            string Error_Logs = Is_From_Broken_Resume ? job.ErrorLog : "nan"; 
+            CancellationTokenSource CTS = job.TokenSource ?? cts;
+
+            
+            return new DownloadJob
+            {
+                Id = job.Id,
+                Url = job.Url,
+                Format = job.Format,
+                Key = job.Key,
+                Status = status,
+                Method = "YT_DLP",
+                Title = job.Title,
+                Thumbnail = job.Thumbnail,
+                Total = job.Total,
+                //
+                Downloaded = Downloaded_Size,
+                Progress = Progress,
+                Speed = Speed,
+                //
+                ErrorLog = Error_Logs,
+                TokenSource = CTS,
+                OutputPath = job.OutputPath,
+                DownloadTask = null,
+                ProcessTreePids = [],
+
+            };
+        }
+
 
         public void Log_pids_tree(DownloadJob job)
         {
             foreach (var item in job.ProcessTreePids)
             {
-                _logger.LogInformation("----Killing Trees " + item);
+                _logger.LogInformation("----logging Killing Trees: {tree}", item);
             }
         }
 
@@ -95,13 +134,13 @@ namespace Downloader_Backend.Logic
 
                 // Define regex patterns (note the comma between pattern and options)
                 var regexPatterns = new[]
-                {
+            {
             new Regex($@"^{Regex.Escape(filePrefix)}.*\.part.*$", RegexOptions.IgnoreCase), // Note: comma here!
             new Regex($@"^{Regex.Escape(filePrefix)}.*\.ytdl$", RegexOptions.IgnoreCase),
             new Regex($@"^{Regex.Escape(filePrefix)}.*\.temp$", RegexOptions.IgnoreCase),
             new Regex($@"^{Regex.Escape(filePrefix)}.*\.m4a$", RegexOptions.IgnoreCase),
-            new Regex($@"^{Regex.Escape(filePrefix)}.*\.f.*\..*\.part$", RegexOptions.IgnoreCase)
-        };
+            new Regex($@"^{Regex.Escape(filePrefix)}.*\.f.*\..*\.part$", RegexOptions.IgnoreCase),
+            };
 
                 // Single enumeration
                 var allFiles = Directory.EnumerateFiles(dir).ToList();
@@ -138,71 +177,75 @@ namespace Downloader_Backend.Logic
         }
 
 
-        public (string ytDlp, string ffmpeg, string deno) Local_Executables_Path()
+        public (string ytDlp, string ffmpeg, string deno, string node) Local_Executables_Path()
         {
-            var baseDir = AppContext.BaseDirectory;
-
-            string yt_dlp_executable;
-            string ffmpeg_executable;
-            string deno_executable;
-
-            if (OperatingSystem.IsWindows())
+            try
             {
-                yt_dlp_executable = RuntimeInformation.OSArchitecture == Architecture.Arm64
-                    ? "yt_dlp_win_arm64.exe"
-                    : "yt_dlp_win_x64.exe";
+                var baseDir = AppContext.BaseDirectory;
 
-                ffmpeg_executable = RuntimeInformation.OSArchitecture == Architecture.Arm64
-                    ? "ffmpeg_win_arm64.exe"
-                    : "ffmpeg_win_x64.exe";
+                string osFolder;
+                string archFolder;
 
-                deno_executable = RuntimeInformation.OSArchitecture == Architecture.Arm64
-                    ? "deno_win_arm64.exe"
-                    : "deno_win_x64.exe";
+                if (OperatingSystem.IsWindows())
+                    osFolder = "windows";
+                else if (OperatingSystem.IsLinux())
+                    osFolder = "linux";
+                else if (OperatingSystem.IsMacOS())
+                    osFolder = "mac";
+                else
+                    throw new PlatformNotSupportedException("Unsupported OS");
+
+                archFolder = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "x64";
+
+                string yt_dlp_executable;
+                string ffmpeg_executable;
+                string deno_executable;
+                string node_executable;
+
+                if (OperatingSystem.IsWindows())
+                {
+                    yt_dlp_executable = $"yt_dlp_win_{archFolder}.exe";
+                    ffmpeg_executable = $"ffmpeg_win_{archFolder}.exe";
+                    deno_executable = $"deno_win_{archFolder}.exe";
+                    node_executable = $"node_win_{archFolder}.exe";
+                }
+                else if (OperatingSystem.IsLinux())
+                {
+                    yt_dlp_executable = $"yt_dlp_linux_{archFolder}";
+                    ffmpeg_executable = $"ffmpeg_linux_{archFolder}";
+                    deno_executable = $"deno_linux_{archFolder}";
+                    node_executable = $"node_linux_{archFolder}";
+                }
+                else // macOS
+                {
+                    yt_dlp_executable = "yt_dlp_mac_universal";
+                    ffmpeg_executable = "ffmpeg_mac_universal";
+                    deno_executable = archFolder == "arm64" ? "deno_mac_arm64" : "deno_mac_x64";
+                    node_executable = archFolder == "arm64" ? "node_mac_arm64" : "node_mac_x64";
+                }
+
+                var ytDlpPath = Path.Combine(baseDir, "tools", osFolder, archFolder, yt_dlp_executable);
+                var ffmpegPath = Path.Combine(baseDir, "tools", osFolder, archFolder, ffmpeg_executable);
+                var denoPath = Path.Combine(baseDir, "tools", osFolder, archFolder, deno_executable);
+                var nodePath = Path.Combine(baseDir, "tools", osFolder, archFolder, node_executable);
+
+                if (!File.Exists(ytDlpPath))
+                    throw new FileNotFoundException($"yt-dlp executable not found at {ytDlpPath}");
+                if (!File.Exists(ffmpegPath))
+                    throw new FileNotFoundException($"ffmpeg executable not found at {ffmpegPath}");
+                if (!File.Exists(denoPath))
+                    throw new FileNotFoundException($"deno executable not found at {denoPath}");
+                if (!File.Exists(nodePath))
+                    throw new FileNotFoundException($"deno executable not found at {nodePath}");
+
+                return (ytDlpPath, ffmpegPath, denoPath, nodePath);
             }
-            else if (OperatingSystem.IsLinux())
+            catch (Exception ex)
             {
-                yt_dlp_executable = RuntimeInformation.OSArchitecture == Architecture.Arm64
-                    ? "yt_dlp_linux_arm64"
-                    : "yt_dlp_linux_x64";
-
-                ffmpeg_executable = RuntimeInformation.OSArchitecture == Architecture.Arm64
-                    ? "ffmpeg_linux_arm64"
-                    : "ffmpeg_linux_x64";
-
-                deno_executable = RuntimeInformation.OSArchitecture == Architecture.Arm64
-                    ? "deno_linux_arm64"
-                    : "deno_linux_x64";
+                _logger.LogError("error occured in local executable path method {ex}", ex.Message);
+                throw new FileNotFoundException("a file not found in path: {ex}", ex.Message);
             }
-            else if (OperatingSystem.IsMacOS())
-            {
-                // yt-dlp + ffmpeg are universal, same for both arch
-                yt_dlp_executable = "yt_dlp_mac_universal";
-                ffmpeg_executable = "ffmpeg_mac_universal";
-
-                deno_executable = RuntimeInformation.OSArchitecture == Architecture.Arm64
-                    ? "deno_mac_arm64"
-                    : "deno_mac_x64";
-            }
-            else
-            {
-                throw new PlatformNotSupportedException("Unsupported OS");
-            }
-
-            var ytDlpPath = Path.Combine(baseDir, "tools", yt_dlp_executable);
-            var ffmpegPath = Path.Combine(baseDir, "tools", ffmpeg_executable);
-            var denoPath = Path.Combine(baseDir, "tools", deno_executable);
-
-            if (!File.Exists(ytDlpPath))
-                throw new FileNotFoundException($"yt-dlp executable not found at {ytDlpPath}");
-            if (!File.Exists(ffmpegPath))
-                throw new FileNotFoundException($"ffmpeg executable not found at {ffmpegPath}");
-            if (!File.Exists(denoPath))
-                throw new FileNotFoundException($"deno executable not found at {denoPath}");
-
-            return (ytDlpPath, ffmpegPath, denoPath);
         }
-
 
 
         public void Checking_And_Starting_Linux_Service()
@@ -460,14 +503,14 @@ namespace Downloader_Backend.Logic
                 Title = await yt_Dlp_Strategy_Engine.GetTitle(url, cancellationToken) ?? "";
                 if (!string.IsNullOrEmpty(Title))
                 {
-                    _fileSaver.File_Path["Title_File"] = Path.Combine(Utility.Create_Path(Making_Logs_Path: true), "temp_file_name.txt");
-                    File.WriteAllText(_fileSaver.File_Path["Title_File"], Title);
+                    Path.Combine(_fileSaver.fileMap["Title_File"], "Title_File.txt");
+                    File.WriteAllText(_fileSaver.fileMap["Title_File"], Title);
                 }
             }
             else
             {
-                _fileSaver.File_Path["Title_File"] = Path.Combine(Utility.Create_Path(Making_Logs_Path: true), "temp_file_name.txt");
-                File.WriteAllText(_fileSaver.File_Path["Title_File"], Title);
+                Path.Combine(_fileSaver.fileMap["Title_File"], "Title_File.txt");
+                File.WriteAllText(_fileSaver.fileMap["Title_File"], Title);
             }
 
             var formats = fmts.EnumerateArray()
@@ -587,14 +630,14 @@ namespace Downloader_Backend.Logic
                 Title = await yt_Dlp_Strategy_Engine.GetTitle(url, cancellationToken) ?? "";
                 if (!string.IsNullOrWhiteSpace(Title))
                 {
-                    _fileSaver.File_Path["Title_File"] = Path.Combine(Utility.Create_Path(Making_Logs_Path: true), "temp_file_name.txt");
-                    File.WriteAllText(_fileSaver.File_Path["Title_File"], Title);
+                    Path.Combine(_fileSaver.fileMap["Title_File"], "Title_File.txt");
+                    File.WriteAllText(_fileSaver.fileMap["Title_File"], Title);
                 }
             }
             else
             {
-                _fileSaver.File_Path["Title_File"] = Path.Combine(Utility.Create_Path(Making_Logs_Path: true), "temp_file_name.txt");
-                File.WriteAllText(_fileSaver.File_Path["Title_File"], Title);
+                Path.Combine(_fileSaver.fileMap["Title_File"], "Title_File.txt");
+                File.WriteAllText(_fileSaver.fileMap["Title_File"], Title);
             }
 
 
@@ -648,40 +691,6 @@ namespace Downloader_Backend.Logic
 
             return formats!;
         }
-
-
-        public void SafeKillProcessTree(Process? process)
-        {
-            if (process == null || process.HasExited) return;
-
-            try
-            {
-                if (OperatingSystem.IsWindows())
-                {
-                    // Built-in tree kill on Windows – extremely fast, no WMI query needed
-                    _logger.LogInformation("going to kill windows process tree of get format method: {process}", process);
-                    process.Kill(entireProcessTree: true);
-                }
-                else
-                {
-                    // Only Linux/macOS fallback – still parallelized in your existing KillProcessTree
-                    if (_processControl.TryGetPid(process, out int pid))
-                    {
-                        var tree = _processControl.GetProcessTree(pid);
-                        _logger.LogInformation("going to kill linux / mac process tree of get format method: {tree}", tree);
-                        _processControl.KillProcessTree(tree);
-                    }
-                    else
-                        _logger.LogInformation("Process IS not found, failed to kill in SafeKillProcessTree");
-                }
-            }
-            catch (Exception ex)
-            {
-                // Best-effort – we don't want a failed kill to crash the method
-                _logger.LogWarning(ex, "Failed to terminate yt-dlp process tree (PID {Pid})", process?.Id);
-            }
-        }
-
 
         public string? GetYtDlpCompatibleBrowser()
         {

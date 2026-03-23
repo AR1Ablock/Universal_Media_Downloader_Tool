@@ -66,6 +66,7 @@ namespace Downloader_Backend.Logic
             {
                 _logger.LogError(ex, "error occured in get format method");
                 return BadRequest(ex.Message);
+                throw;
             }
             finally
             {
@@ -93,7 +94,7 @@ namespace Downloader_Backend.Logic
                     string rawTitle = "";
                     try
                     {
-                        if (_fileSaver.File_Path.TryGetValue("Title_File", out string? Title_File))
+                        if (_fileSaver.fileMap.TryGetValue("Title_File", out string? Title_File))
                         {
                             if (!string.IsNullOrWhiteSpace(Title_File))
                             {
@@ -111,7 +112,7 @@ namespace Downloader_Backend.Logic
                         if (string.IsNullOrWhiteSpace(rawTitle))
                             rawTitle = await _yt_Dlp_Strategy_Engine.GetTitle(url, Token_Source.Token) ?? req.DownloadId;
                         {
-                            Title_File = Path.Combine(Utility.Create_Path(Making_Logs_Path: true), "temp_file_name.txt");
+                            Title_File = Path.Combine(Utility.Create_Path(Making_Logs_Path: true), "Title_File.txt");
                             My_Files.WriteAllText(Title_File, rawTitle);
                         }
                     }
@@ -130,8 +131,11 @@ namespace Downloader_Backend.Logic
                     var safeTitle = string.Join("_", rawTitle.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
 
                     // build and fire‐and‐forget
-                    var job = new DownloadJob(req.DownloadId, url, req.Format)
+                    var job = new DownloadJob
                     {
+                        Id = req.DownloadId,
+                        Url = req.Url,
+                        Format = req.Format,
                         Thumbnail = req.Thumbnail,
                         Title = safeTitle,
                         Method = "yt-dlp",
@@ -150,6 +154,7 @@ namespace Downloader_Backend.Logic
                 _globalCancellation.RemoveTokenSource(Token_Key);
                 _logger.LogInformation($"Error in NormalDownload: {ex.Message}");
                 return StatusCode(500, "Internal server error: " + ex.Message);
+                throw;
             }
 
         }
@@ -304,32 +309,18 @@ namespace Downloader_Backend.Logic
         public async Task<IActionResult> ResumeFresh([FromBody] JobActionRequest req)
         {
             if (!_tracker.Jobs.TryGetValue(req.JobId, out var job))
-                return NotFound();
+            return NotFound();
             await Pause(req);
-            // 1) If there’s a live Process, kill it and wait for exit
-            if (_processControl.TryGetPid(job.Process, out int pid) && _processControl.ProcessExists(pid))
-            {
-                _processControl.KillProcessTree(job.ProcessTreePids);
-                _utility.Log_pids_tree(job);
-                job?.Process?.WaitForExit();
-            }
 
-            // 2) Clean up all partial files
-            _utility.DeleteAllDownloadArtifacts(job!.OutputPath);
+            var (Cts_Key, Cts) = _globalCancellation.Get_Token_With_SC();
+            var New_Job = _utility.Create_Download_Job(job, status: "restarting", Method_Caller: "Restart", Cts);
 
-            // 3) Reset state
-            job.ErrorLog = "";
-            job.Status = "restarting";
+            await DeleteFile(req, Preserve_File_DB_Rec: true, Preserve_File_UI_Rec: true);
 
-            var Token_Key = _globalCancellation.GenerateKey();
-            var Token_Source = _globalCancellation.CreateTokenSource(Token_Key);
-            job.TokenSource = Token_Source;
-
-            await Task.Delay(100, Token_Source.Token);
+            _tracker.Jobs[job.Id] = New_Job;
 
             // 4) Kick off a fresh download
-            //    restart=true will *not* pass --continue, so yt-dlp starts from scratch
-            return await _yt_Dlp_Strategy_Engine.DownloadAsync(job, Token_Source.Token, _globalCancellation, _download_history, _tracker, resume: false, restart: true, Token_Key);
+            return await _yt_Dlp_Strategy_Engine.DownloadAsync(New_Job, Cts.Token, _globalCancellation, _download_history, _tracker, resume: false, restart: true, Cts_Key);
         }
 
 
@@ -344,17 +335,17 @@ namespace Downloader_Backend.Logic
                 await Pause(new JobActionRequest(req.JobId));
                 string NewUrl = _utility.SanitizeUrl(req.NewUrl);
                 oldJob.Url = NewUrl;
-                _processControl.KillProcessTree(oldJob.ProcessTreePids);
-                _utility.Log_pids_tree(oldJob);
-                // Reconstruct new job with updated URL
-                oldJob.Status = "resuming";
 
-                var Token_Key = _globalCancellation.GenerateKey();
-                var Token_Source = _globalCancellation.CreateTokenSource(Token_Key);
-                oldJob.TokenSource = Token_Source;
+                var (Cts_Key, Cts) = _globalCancellation.Get_Token_With_SC();
+                var New_Job = _utility.Create_Download_Job(oldJob, status: "resuming", Method_Caller: "Broken_Resume", Cts);
 
-                await Task.Delay(100, Token_Source.Token);
-                return await _yt_Dlp_Strategy_Engine.DownloadAsync(oldJob, Token_Source.Token, _globalCancellation, _download_history, _tracker, resume: true, restart: false, Token_Key);
+                await DeleteFile(new JobActionRequest(req.JobId), Preserve_File:true, Preserve_File_DB_Rec: true, Preserve_File_UI_Rec: true);
+
+                _tracker.Jobs[oldJob.Id] = New_Job;
+
+                await Task.Delay(100, Cts.Token);
+
+                return await _yt_Dlp_Strategy_Engine.DownloadAsync(oldJob, Cts.Token, _globalCancellation, _download_history, _tracker, resume: true, restart: false, Cts_Key);
             }
 
             return NotFound("Item not found.");
@@ -367,12 +358,10 @@ namespace Downloader_Backend.Logic
         public async Task<IActionResult> DeleteUIOnlyAsync([FromBody] JobActionRequest req)
         {
             await Pause(req);
-            await Task.Delay(250);
-            if (_tracker.Jobs.TryRemove(req.JobId, out var job))
+            
+            if (_tracker.Jobs.TryRemove(req.JobId, out var _))
             {
-                _processControl.KillProcessTree(job.ProcessTreePids);
-                _utility.Log_pids_tree(job);
-                await _download_history.DeleteJobAsync(req.JobId); // remove from history
+                await DeleteFile(new JobActionRequest(req.JobId), Preserve_File:true);
                 return Ok();
             }
             return NotFound();
@@ -396,7 +385,7 @@ namespace Downloader_Backend.Logic
 
 
         [HttpPost("delete-file")]
-        public async Task<IActionResult> DeleteFile([FromBody] JobActionRequest req)
+        public async Task<IActionResult> DeleteFile([FromBody] JobActionRequest req, bool Preserve_File = false, bool Preserve_File_DB_Rec = false, bool Preserve_File_UI_Rec = false)
         {
             await Pause(req);
             if (_tracker.Jobs.TryGetValue(req.JobId, out var job))
@@ -405,28 +394,29 @@ namespace Downloader_Backend.Logic
                 {
                     if (job?.TokenSource != null)
                     {
-                        job.TokenSource?.Cancel();   // signal cancellation
+                        if (!job.TokenSource.IsCancellationRequested)
+                            job.TokenSource?.Cancel();   // signal cancellation
+                        //
                         job.TokenSource?.Dispose();  // free resources
                         job.TokenSource = null;     // clear reference
                     }
 
-                    if (_processControl.TryGetPid(job?.Process, out int pid) && _processControl.ProcessExists(pid))
+                    if (_processControl.TryGetPid(job?.Process, out int pid))
                     {
                         _processControl.KillProcessTree(job?.ProcessTreePids!);
-                        job?.Process?.Dispose();
-                    }
-                    else
-                    {
-                        _processControl.KillProcessTree(job?.ProcessTreePids!);
-                        _utility.Log_pids_tree(job!);
                     }
 
                     if (job?.DownloadTask != null)
                         await Task.WhenAny(job.DownloadTask, Task.Delay(1500));
 
-                    _utility.DeleteAllDownloadArtifacts(job?.OutputPath!);
-                    _tracker.Jobs.TryRemove(req.JobId, out _); // remove from tracker
-                    await _download_history.DeleteJobAsync(req.JobId); // remove from history
+                    if (!Preserve_File)
+                        _utility.DeleteAllDownloadArtifacts(job?.OutputPath!);
+
+                    if (!Preserve_File_UI_Rec)
+                        _tracker.Jobs.TryRemove(req.JobId, out _); // remove from tracker
+
+                    if (!Preserve_File_DB_Rec)
+                        await _download_history.DeleteJobAsync(req.JobId); // remove from history
                 }
                 catch (Exception ex)
                 {

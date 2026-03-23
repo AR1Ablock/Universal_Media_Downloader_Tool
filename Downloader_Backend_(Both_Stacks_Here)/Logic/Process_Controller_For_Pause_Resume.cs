@@ -46,10 +46,7 @@ namespace Downloader_Backend.Logic
             {
                 try
                 {
-                    Parallel.ForEach(job.ProcessTreePids, pid =>
-                    {
-                        SuspendProcessAndChildren(pid);
-                    });
+                    Parallel.ForEach(job.ProcessTreePids, SuspendProcessAndChildren);
                 }
                 catch (Exception ex)
                 {
@@ -72,7 +69,7 @@ namespace Downloader_Backend.Logic
                             {
                                 _logger?.LogInformation("Suspending the pid: {pid}", p);
                                 killProc = Process.Start("kill", $"-STOP {p}");
-                                killProc?.WaitForExit(500);
+                                killProc?.WaitForExit(10);
                                 // now kill the command below.
                                 if (killProc != null)
                                 {
@@ -88,7 +85,7 @@ namespace Downloader_Backend.Logic
                 {
                     if (killProc != null)
                     {
-                        killProc.WaitForExit(500);
+                        killProc.WaitForExit(50);
                         killProc.Dispose();
                     }
                     _logger?.LogInformation("------Error suspending processes. " + ex.Message);
@@ -105,10 +102,7 @@ namespace Downloader_Backend.Logic
 
                 try
                 {
-                    Parallel.ForEach(job.ProcessTreePids, pid =>
-                    {
-                        ResumeProcessAndChildren(pid);
-                    });
+                    Parallel.ForEach(job.ProcessTreePids, ResumeProcessAndChildren);
                 }
                 catch (Exception ex)
                 {
@@ -131,7 +125,7 @@ namespace Downloader_Backend.Logic
                             {
                                 _logger?.LogInformation("Resuming the pid: {pid}", p);
                                 Resume_Proc = Process.Start("kill", $"-CONT {p}");
-                                Resume_Proc?.WaitForExit(500);
+                                Resume_Proc?.WaitForExit(10);
                                 // now kill the command below.
                                 if (Resume_Proc != null)
                                 {
@@ -147,7 +141,7 @@ namespace Downloader_Backend.Logic
                 {
                     if (Resume_Proc != null)
                     {
-                        Resume_Proc.WaitForExit(500);
+                        Resume_Proc.WaitForExit(50);
                         Resume_Proc.Dispose();
                     }
                     _logger?.LogInformation("------Error Resuming processes. " + ex.Message);
@@ -159,14 +153,14 @@ namespace Downloader_Backend.Logic
 
         public List<int> GetProcessTree(int rootPid)
         {
+            if(rootPid <= 0 ) return [];
             var pids = new ConcurrentBag<int> { rootPid };  // Start with root
 
             if (OperatingSystem.IsWindows())
             {
                 try
                 {
-                    var searcher = new ManagementObjectSearcher(
-                        $"Select * From Win32_Process Where ParentProcessId={rootPid}");
+                    var searcher = new ManagementObjectSearcher($"Select * From Win32_Process Where ParentProcessId={rootPid}");
                     var children = searcher.Get().Cast<ManagementObject>();
 
                     Parallel.ForEach(children, obj =>
@@ -240,8 +234,7 @@ namespace Downloader_Backend.Logic
             {
                 try
                 {
-                    using var proc = Process.GetProcessById(pid);
-                    if (!proc.HasExited)
+                    if (ProcessExists(pid))
                         alive.Add(pid);
                 }
                 catch (ArgumentException)
@@ -280,11 +273,12 @@ namespace Downloader_Backend.Logic
                 try
                 {
                     using var proc = Process.GetProcessById(pid);
-                    if (!proc.HasExited)
+                    if (ProcessExists(pid))
                     {
                         _logger?.LogInformation("killing process tree: {proc}", pid);
                         proc.Kill(entireProcessTree: true); // Kill tree on Windows; single process on Unix (loop handles all)
-                        proc.WaitForExit(1000);
+                        proc.WaitForExit(50);
+                        proc.Dispose();
                     }
                 }
                 catch (ArgumentException)
@@ -307,18 +301,12 @@ namespace Downloader_Backend.Logic
         // === WINDOWS-ONLY HELPERS ===
         private void SuspendProcessAndChildren(int pid)
         {
-            Parallel.ForEach(EnumerateThreadIds(pid), tid =>
-            {
-                SuspendThreadById(tid);
-            });
+            Parallel.ForEach(EnumerateThreadIds(pid), SuspendThreadById);
         }
 
         private void ResumeProcessAndChildren(int pid)
         {
-            Parallel.ForEach(EnumerateThreadIds(pid), tid =>
-               {
-                   ResumeThreadById(tid);
-               });
+            Parallel.ForEach(EnumerateThreadIds(pid), ResumeThreadById);
         }
 
         private static IEnumerable<int> EnumerateThreadIds(int owningProcessId)
