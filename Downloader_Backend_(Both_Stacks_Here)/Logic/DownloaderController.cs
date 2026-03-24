@@ -359,7 +359,7 @@ namespace Downloader_Backend.Logic
         {
             await Pause(req);
             
-            if (_tracker.Jobs.TryRemove(req.JobId, out var _))
+            if (_tracker.Jobs.TryGetValue(req.JobId, out var _))
             {
                 await DeleteFile(new JobActionRequest(req.JobId), Preserve_File:true);
                 return Ok();
