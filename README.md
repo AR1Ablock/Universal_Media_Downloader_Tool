@@ -74,11 +74,13 @@
 │   Download Service   │   Cleanup Service      │
 │   Process Control    │   Database Layer       │
 └────────────────────────┬──────────────────────┘
-                         │ External APIs
-┌────────────────────────▼──────────────────────┐
-│             External Services                 │
-│     yt-dlp • FFmpeg • Platform APIs           │
-└───────────────────────────────────────────────┘
+                         │─────│
+                               │
+                         External APIs
+┌───────────────────────────────▼────────────────────────────┐
+│                    External Services                       │
+│          yt-dlp • FFmpeg • Node •Deno • Platform APIs      │
+└────────────────────────────────────────────────────────── ─┘
 ```
 
 <br/>
@@ -87,9 +89,13 @@
 
 ### **Prerequisites**
 - [.NET 8 SDK](https://dotnet.microsoft.com/download)
-- [Node.js 18+](https://nodejs.org/) (for frontend)
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) (auto-downloaded)
-- [FFmpeg](https://ffmpeg.org/) (auto-downloaded)
+
+- ### These will be installed when run the Script located at Downloader_Backend_(Both_Stacks_Here)/Downloader_Tools_Win.ps1 and Downloader_Tools_linux_Mac.sh
+- [Node.js 18+] (for frontend)
+- [yt-dlp] (auto-downloaded)
+- [FFmpeg] (auto-downloaded)
+- [Deno] (auto-download)
+
 
 <br/>
 
@@ -110,10 +116,13 @@ cd ../frontend
 npm install
 npm run dev
 
-# 4. FullStack setup (Backend folder has both Frontend + Backend)
+# 4. FullStack setup (Backend directory has both Frontend + Backend)
 cd Downloader_Backend
+./Downloader_Tools_linux_Mac.sh (for linux and mac)
+powershell.exe Downloader_Tools_Win.ps1 (Windows) 
 dotnet restore
 dotnet run
+
 
 # 5. Access the application
 # Frontend: http://localhost:5173
@@ -141,11 +150,11 @@ dotnet run
 
 ## 📱 Platform Support
 
-| Platform | Backend | Frontend | Download Engine   |
-| -------- | ------- | -------- | ----------------- |
-| Windows  | ✅ Full  | ✅ Full   | ✅ yt-dlp + FFmpeg |
-| Linux    | ✅ Full  | ✅ Full   | ✅ yt-dlp + FFmpeg |
-| macOS    | ✅ Full  | ✅ Full   | ✅ yt-dlp + FFmpeg |
+| Platform |  Backend |  Frontend  |          Download Engine         |
+| -------- | -------- | ---------- | -------------------------------- |
+| Windows  | ✅ Full  | ✅ Full   | ✅ yt-dlp + FFmpeg + Node + Deno |
+| Linux    | ✅ Full  | ✅ Full   | ✅ yt-dlp + FFmpeg + Node + Deno |
+| macOS    | ✅ Full  | ✅ Full   | ✅ yt-dlp + FFmpeg + Node + Deno |
 
 <br/>
 
@@ -166,6 +175,8 @@ media-downloader/
 │   ├── Data/
 │   │   └── DownloadContext.cs
 │   └── Program.cs
+|   └── Downloader_Tools_linux_Mac.sh
+|   └── Downloader_Tools_Win.ps1
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
@@ -225,21 +236,12 @@ media-downloader/
 | ------------ | ------------------------------- |
 | yt-dlp       | Core downloading engine         |
 | FFmpeg       | Media processing and conversion |
+| Node         | Used by Frontend and yt-dlp     |
+| Deno         | Used by yt-dlp                  |
 | ASP.NET Core | Backend framework               |
 | Vue.js       | Frontend framework              |
 
 <br/>
-
-## 📊 Statistics
-
-| Item                | Count                               |
-| ------------------- | ----------------------------------- |
-| Total Lines of Code | ~3,256                              |
-| Backend (C#)        | ~2,100                              |
-| Frontend (Vue/JS)   | ~701                                |
-| CSS                 | 455                                 |
-| Source Files        | 15                                  |
-
 <br/>
 
 ## 🎨 Screenshots
