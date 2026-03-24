@@ -369,7 +369,7 @@ namespace Downloader_Backend.Logic
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    Run_Open_Media_Directory_Process("cmd.exe", $"/c start explorer /select,\"{url}\"");
+                    Run_Open_Media_Directory_Process("cmd.exe", $"/c start {url}");
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
