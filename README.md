@@ -108,6 +108,8 @@ cd media-downloader
 
 # 2. Backend setup
 cd Downloader_Backend
+./Downloader_Tools_linux_Mac.sh (for linux and mac)
+powershell.exe Downloader_Tools_Win.ps1 (Windows) 
 dotnet restore
 dotnet run
 
