@@ -1,5 +1,6 @@
 
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using Downloader_Backend.Model;
 using Microsoft.AspNetCore.Mvc;
@@ -27,7 +28,9 @@ namespace Downloader_Backend.Logic
         public async Task<IActionResult> GetFormats([FromBody] FormatRequest req)
         {
             var Token_Key = _globalCancellation.GenerateKey();
-            var Token_Source = _globalCancellation.CreateTokenSource(Token_Key);
+            var Unique_Key = $"{Token_Key}:{req.Session_ID}";
+            //
+            var Token_Source = _globalCancellation.CreateTokenSource(Unique_Key);
             var token = Token_Source.Token;
 
             try
@@ -70,7 +73,8 @@ namespace Downloader_Backend.Logic
             }
             finally
             {
-                _globalCancellation.RemoveTokenSource(Token_Key);
+                _logger.LogInformation("fetching formats done, Going to cancel token");
+                _globalCancellation.RemoveTokenSource(Unique_Key);
             }
 
         }
@@ -80,7 +84,9 @@ namespace Downloader_Backend.Logic
         public async Task<IActionResult> NormalDownload([FromBody] DownloadRequest req)    // ← accept the request token
         {
             var Token_Key = _globalCancellation.GenerateKey();
-            var Token_Source = _globalCancellation.CreateTokenSource(Token_Key);
+            var Unique_Key = $"{Token_Key}:{req.Key}";
+            //
+            var Token_Source = _globalCancellation.CreateTokenSource(Unique_Key);
 
             try
             {
@@ -144,14 +150,14 @@ namespace Downloader_Backend.Logic
                         TokenSource = Token_Source,
                     };
                     // await _download_history.Save_And_UpdateJobAsync(job); // save initial job state
-                    var result = await _yt_Dlp_Strategy_Engine.DownloadAsync(job, Token_Source.Token, _globalCancellation, _download_history, _tracker, false, false, Token_Key);
+                    var result = await _yt_Dlp_Strategy_Engine.DownloadAsync(job, Token_Source.Token, _globalCancellation, _download_history, _tracker, false, false, Unique_Key);
                     return result;
                 }, Token_Source.Token);
 
             }
             catch (Exception ex)
             {
-                _globalCancellation.RemoveTokenSource(Token_Key);
+                _globalCancellation.RemoveTokenSource(Unique_Key);
                 _logger.LogInformation($"Error in NormalDownload: {ex.Message}");
                 return StatusCode(500, "Internal server error: " + ex.Message);
                 throw;
@@ -199,38 +205,70 @@ namespace Downloader_Backend.Logic
         }
 
 
-
-
-        [HttpGet("progress")]
-        public IActionResult Progress(string Key)
+        [HttpGet("progress-sse")]
+        public async Task<IActionResult> Progress_SSE(string Key)
         {
             if (string.IsNullOrWhiteSpace(Key))
                 return BadRequest("Key is Missing. Login required.");
 
-            // Get all jobs for this user's key
-            var userJobs = _tracker.Jobs.Values
-                .Where(x => x.Key == Key)
-                .ToList();
+            Response.ContentType = "text/event-stream";
+            Response.Headers.Append("Cache-Control", "no-cache");
+            Response.Headers.Append("Connection", "keep-alive");
 
-            if (userJobs.Count == 0)
+            var writer = new StreamWriter(Response.Body, Encoding.UTF8) { AutoFlush = false };
+
+            _tracker.AddSseConnection(Key, writer); // add current user session key + connection (writer) to list when frontend page load. so many users can be manage.
+
+            // === Send initial state immediately (camelCase) ===
+            try
             {
-                _logger.LogInformation($"No jobs found with key: {Key}");
-                return Ok(new List<DownloadJob>()); // Return empty array instead of 404
-            }
+                var userJobs = _tracker.Jobs.Values
+                    .Where(x => x.Key == Key)
+                    .ToList();
 
-            return Ok(userJobs); // Return array of jobs
+                var initialJson = JsonSerializer.Serialize(userJobs, _tracker.JsonOptions); // ← uses the same camelCase settings
+                await writer.WriteAsync($"data: {initialJson}\n\n");
+                await writer.FlushAsync();
+            }
+            catch { }
+
+            // === Keep-alive loop ===
+            try
+            {
+                while (!HttpContext.RequestAborted.IsCancellationRequested)
+                {
+                    await writer.WriteAsync(": keep-alive\n\n");
+                    await writer.FlushAsync();
+                    await Task.Delay(30_000, HttpContext.RequestAborted);
+                }
+            }
+            catch (OperationCanceledException) { }
+            finally
+            {
+                _tracker.RemoveSseConnection(Key, writer);
+                await writer.DisposeAsync();
+            }
+            return Empty;
         }
 
 
 
+
         [HttpPost("Pause_All_Tasks")]
-        public async Task<IActionResult> Pause_All_Jobs()
+        public async Task<IActionResult> Pause_All_Jobs([FromBody] Cancel_Pause_Jobs_Request req)
         {
             try
             {
                 var jobs = _tracker.Jobs.ToList();
 
-                _globalCancellation.CancelAndDisposeAll();
+                _logger.LogInformation("Going to cancel token and pause active jobs");
+
+                _globalCancellation.CancelAndDisposeAll(req.Session_ID);
+
+                if (req.Reload)
+                {
+                    return Ok("cancel token get fired on reload");
+                }
 
                 if (jobs.Count == 0)
                 {
@@ -275,6 +313,7 @@ namespace Downloader_Backend.Logic
                 _processControl.Suspend(job);
                 job.Status = "paused";
                 await _download_history.Save_And_UpdateJobAsync(job); // save paused state
+                await _tracker.NotifyJobUpdatedAsync(job.Key);   // fire-and-forget, won't block download
                 return Ok();
             }
             return NotFound("Process has already dead in pause method");
@@ -293,6 +332,7 @@ namespace Downloader_Backend.Logic
                     _processControl.Resume(job);
                     job.Status = "downloading";
                     await _download_history.Save_And_UpdateJobAsync(job); // save resumed state
+                    await _tracker.NotifyJobUpdatedAsync(job.Key);   // fire-and-forget, won't block download
                     return Ok();
                 }
                 else
@@ -309,11 +349,12 @@ namespace Downloader_Backend.Logic
         public async Task<IActionResult> ResumeFresh([FromBody] JobActionRequest req)
         {
             if (!_tracker.Jobs.TryGetValue(req.JobId, out var job))
-            return NotFound();
+                return NotFound();
             await Pause(req);
 
             var (Cts_Key, Cts) = _globalCancellation.Get_Token_With_SC();
             var New_Job = _utility.Create_Download_Job(job, status: "restarting", Method_Caller: "Restart", Cts);
+            await _tracker.NotifyJobUpdatedAsync(New_Job.Key);   // fire-and-forget, won't block download
 
             await DeleteFile(req, Preserve_File_DB_Rec: true, Preserve_File_UI_Rec: true);
 
@@ -338,8 +379,9 @@ namespace Downloader_Backend.Logic
 
                 var (Cts_Key, Cts) = _globalCancellation.Get_Token_With_SC();
                 var New_Job = _utility.Create_Download_Job(oldJob, status: "resuming", Method_Caller: "Broken_Resume", Cts);
+                await _tracker.NotifyJobUpdatedAsync(New_Job.Key);   // fire-and-forget, won't block download
 
-                await DeleteFile(new JobActionRequest(req.JobId), Preserve_File:true, Preserve_File_DB_Rec: true, Preserve_File_UI_Rec: true);
+                await DeleteFile(new JobActionRequest(req.JobId), Preserve_File: true, Preserve_File_DB_Rec: true, Preserve_File_UI_Rec: true);
 
                 _tracker.Jobs[oldJob.Id] = New_Job;
 
@@ -358,10 +400,11 @@ namespace Downloader_Backend.Logic
         public async Task<IActionResult> DeleteUIOnlyAsync([FromBody] JobActionRequest req)
         {
             await Pause(req);
-            
-            if (_tracker.Jobs.TryGetValue(req.JobId, out var _))
+
+            if (_tracker.Jobs.TryGetValue(req.JobId, out var job))
             {
-                await DeleteFile(new JobActionRequest(req.JobId), Preserve_File:true);
+                await DeleteFile(new JobActionRequest(req.JobId), Preserve_File: true);
+                await _tracker.NotifyJobUpdatedAsync(job.Key);   // fire-and-forget, won't block download
                 return Ok();
             }
             return NotFound();
@@ -413,10 +456,14 @@ namespace Downloader_Backend.Logic
                         _utility.DeleteAllDownloadArtifacts(job?.OutputPath!);
 
                     if (!Preserve_File_UI_Rec)
-                        _tracker.Jobs.TryRemove(req.JobId, out _); // remove from tracker
+                    {
+                        _tracker.Jobs.TryRemove(req.JobId, out var old_job); // remove from tracker
+                        await _tracker.NotifyJobUpdatedAsync(old_job!.Key);   // fire-and-forget, won't block download
+                    }
 
                     if (!Preserve_File_DB_Rec)
                         await _download_history.DeleteJobAsync(req.JobId); // remove from history
+
                 }
                 catch (Exception ex)
                 {
