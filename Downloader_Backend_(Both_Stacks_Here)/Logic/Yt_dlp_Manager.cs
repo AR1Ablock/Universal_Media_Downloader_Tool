@@ -37,6 +37,8 @@ namespace Downloader_Backend.Logic
 
         }
 
+        public TimeSpan timeout = TimeSpan.FromSeconds(90); // configurable
+
         private const string UniversalAllSitesExtractorArgs =
         "generic:impersonate,prefer_ffmpeg,fragment_query,variant_query,hls_key=;" +          // generic fallback + HLS fixes + ffmpeg success
         "youtube:player_client=android,web,mweb,ios,tv,web_embedded;formats=incomplete;player_skip=js,configs,webpage;use_ad_playback_context=true;po_token=web.gvs+;webpage_client=web;skip=hls,dash;" +  // BEST YouTube success combo (multi-client fallback + more formats + skip blocks + PO/ad bypass)
@@ -258,7 +260,7 @@ namespace Downloader_Backend.Logic
             }
             catch (Exception ex)
             {
-                string error = $"Error happened in format fetching executioner {ex.Message}";
+                string error = $"Error happened in format adaptive executioner {ex.Message}";
                 _logger.LogError("{failed}", error);
                 return (false, "", error, "");
             }
@@ -290,8 +292,25 @@ namespace Downloader_Backend.Logic
                 proc = Process.Start(psi) ?? throw new InvalidOperationException("yt-dlp launch failed");
                 var outTask = proc.StandardOutput.ReadToEndAsync(ct);
                 var errTask = proc.StandardError.ReadToEndAsync(ct);
-                await proc.WaitForExitAsync(ct);
-                return (proc.ExitCode == 0, await outTask, await errTask);
+                var exitTask = proc.WaitForExitAsync(ct);
+
+                var allTasks = Task.WhenAll(outTask, errTask, exitTask);
+
+                var timeoutTask = Task.Delay(timeout, ct);
+
+                var completed = await Task.WhenAny(allTasks, timeoutTask);
+
+                if (completed == timeoutTask && !ct.IsCancellationRequested)
+                {
+                    throw new TimeoutException($"server {timeout.TotalSeconds} seconds response timeout.");
+                }
+
+                // collect results first, then return
+                var success = proc.ExitCode == 0;                
+                var stdout = await outTask;
+                var stderr = await errTask;
+
+                return (success, stdout, stderr);
             }
             catch (OperationCanceledException ex)
             {
@@ -300,7 +319,13 @@ namespace Downloader_Backend.Logic
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error occurd in Get format / Title method {ex}", ex.Message);
+                string error = "";
+                if(ct.IsCancellationRequested)
+                error = "Get format / Title Cancelled By User and cancellation token get fired {ex}"+ ex.Message;
+                else
+                error = "Get format / Title Cancelled By User and cancellation token get fired {ex}"+ ex.Message;
+                //
+                _logger.LogError("Error occur in Get format / Title method {ex}", ex.Message);
                 throw;
             }
             finally
@@ -486,9 +511,7 @@ namespace Downloader_Backend.Logic
                 {
                     job.ErrorLog += $"\n=== CACHE HIT → using saved chain: {cachedChain} ===\n";
                     job.Status = "using_cached_strategy";
-
-                    /*                     await history.Save_And_UpdateJobAsync(job); */
-
+                    //
                     var cachedFullArgs = RebuildArgumentsFromChain(baseArgs, cachedChain);
                     overallSuccess = await ExecuteSingleAttemptAsync(job, linkedToken, globalCancellation, history, tracker, cachedFullArgs, resumeRequested, restartRequested, outputFile, tokenKey);
                 }
@@ -560,7 +583,14 @@ namespace Downloader_Backend.Logic
             }
             finally
             {
-                globalCancellation.RemoveTokenSource(tokenKey);
+                _logger.LogInformation("Download job of {job} completed, Going to cancel token", job.Title);
+                var Sc = job.TokenSource;
+                if( Sc != null)
+                {
+                    if(!Sc.IsCancellationRequested)
+                    Sc?.Cancel();
+                    Sc?.Dispose();
+                }
                 job.DownloadTask = null;
             }
         }
@@ -628,8 +658,9 @@ namespace Downloader_Backend.Logic
                     {
                         var line = await proc.StandardError.ReadLineAsync(linkedToken);
                         if (!string.IsNullOrWhiteSpace(line))
-                            job.ErrorLog += "[stderr] " + line + "\n";
+                        job.ErrorLog += "[stderr] " + line + "\n";
                         job.Status = "Trying-err";
+                        await _tracker.NotifyJobUpdatedAsync(job.Key);   // fire-and-forget, won't block download
                     }
                 }, linkedToken);
 
@@ -639,6 +670,7 @@ namespace Downloader_Backend.Logic
                     job.OutputPath = outputFile;
                     _tracker.Jobs[job.Id] = job;
                     await _download_history.Save_And_UpdateJobAsync(job);
+                    await _tracker.NotifyJobUpdatedAsync(job.Key);   // fire-and-forget, won't block download
 
                     string? line;
                     while ((line = await proc.StandardOutput.ReadLineAsync(linkedToken)) != null)
@@ -658,12 +690,14 @@ namespace Downloader_Backend.Logic
                                 job.Total = (long)_utility.ParseHumanReadableSize(parts[2]);
                                 job.Speed = parts[3].Trim();
                                 job.Status = "downloading";
+                                await _tracker.NotifyJobUpdatedAsync(job.Key);   // fire-and-forget, won't block download
                             }
                         }
                         else
                         {
                             job.ErrorLog += "[stdout] " + line + "\n";
                             job.Status = "Trying";
+                            await _tracker.NotifyJobUpdatedAsync(job.Key);   // fire-and-forget, won't block download
                         }
                     }
                 }, linkedToken);
@@ -674,6 +708,7 @@ namespace Downloader_Backend.Logic
                 bool result = proc.ExitCode == 0;
                 job.Status = result ? "completed" : "failed";
                 await _download_history.Save_And_UpdateJobAsync(job);
+                await _tracker.NotifyJobUpdatedAsync(job.Key);   // fire-and-forget, won't block download
 
                 return result;
             }
@@ -682,6 +717,7 @@ namespace Downloader_Backend.Logic
                 _logger.LogError("Download Cancelled By User and cancelation token get fired {ex}", ex.Message);
                 job.ErrorLog += "[INFO] Attempt canceled by user.\n";
                 job.Status = "canceled";
+                await _tracker.NotifyJobUpdatedAsync(job.Key);   // fire-and-forget, won't block download
                 throw;   // ← IMPORTANT: rethrow so upper level stops immediately (no more strategies)
             }
             catch (Exception ex)
@@ -689,6 +725,7 @@ namespace Downloader_Backend.Logic
                 _logger.LogError("Downloading error occured: {er}", ex.Message);
                 job.ErrorLog += $"[EXCEPTION] {ex.Message}\n";
                 job.Status = "error occured";
+                await _tracker.NotifyJobUpdatedAsync(job.Key);   // fire-and-forget, won't block download
                 return false;
             }
             finally
