@@ -119,7 +119,7 @@ import { ref, reactive, onMounted, onBeforeUnmount, watch, onUnmounted } from "v
 import Download from "./components/Downloads.vue";
 import Login from "./components/Login.vue";
 
-function openit(){
+function openit() {
   window.open('/Supported_Site.html', '_blank')
 }
 
@@ -207,7 +207,7 @@ async function getFormats() {
     const res = await fetch(`${ServerUrl}/formats`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: url.value }),
+      body: JSON.stringify({ Url: url.value, Session_ID: userKey.value }),
     });
     if (!res.ok) throw new Error(await res.text());
 
@@ -384,13 +384,12 @@ function handleNetworkError(error, context = "action", method) {
 const isOffline = ref(false);
 
 
-async function pauseAllJobs() {
+async function pauseAllJobs(reload = false) {
   try {
     const response = await fetch(`${ServerUrl}/Pause_All_Tasks`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ Reload: reload, Session_ID: userKey.value }),
     })
 
     if (!response.ok) {
@@ -409,7 +408,7 @@ async function pauseAllJobs() {
 function updateNetworkStatus() {
   isOffline.value = !navigator.onLine
   if (isOffline.value) {
-    pauseAllJobs();
+    pauseAllJobs(false); // false here means don't return after just fire token. do all work
   }
 }
 
@@ -420,12 +419,22 @@ function esc_close_event(e) {
   }
 }
 
+async function Fire_Token_Before_Reload_Happen() {
+  console.log("resting...");
+  await pauseAllJobs(true); // true here mean, just fire token and come back, don't do any thing else.
+}
 
 // Lifecycle hooks to attach/remove event listeners
 onMounted(() => {
 
+
   // auto-show when app loads
-  setTimeout(() => {
+  setTimeout(async () => {
+    await pauseAllJobs(true);
+  }, 100);
+
+
+  setTimeout(async () => {
     visible.value = true;
   }, 1000);
 
@@ -450,6 +459,7 @@ onUnmounted(() => {
   window.removeEventListener('online', updateNetworkStatus)
   window.removeEventListener('offline', updateNetworkStatus)
   window.removeEventListener("keydown", esc_close_event);
+  window.removeEventListener("beforeunload", Fire_Token_Before_Reload_Happen);
 });
 
 
