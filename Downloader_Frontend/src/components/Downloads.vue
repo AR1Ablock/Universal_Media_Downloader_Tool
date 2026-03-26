@@ -38,7 +38,7 @@
           <div class="details">
             <span>{{ job.downloaded }} MB / {{ job.total }} MB</span>
             <span>Speed: {{ job.speed
-              }}{{ job.speed !== "N/A" && job.speed !== "0" ? "/s" : "" }}</span>
+            }}{{ job.speed !== "N/A" && job.speed !== "0" ? "/s" : "" }}</span>
             <span>Progress: {{ job.progress?.toFixed(2) ?? 0 }}%</span>
             <span>Job: {{ job.status }}</span>
           </div>
@@ -67,8 +67,7 @@
               :disabled="job.status !== 'completed'">
               <i class="fas fa-download"></i> Download
             </button>
-            <button @click="Open_File_Directory(job.id)" class="btn download"
-              :disabled="job.status !== 'completed' ">
+            <button @click="Open_File_Directory(job.id)" class="btn download" :disabled="job.status !== 'completed'">
               <i class="fas fa-folder-open"></i> Open
             </button>
           </div>
@@ -89,14 +88,20 @@ let userKey = ref("");
 let Is_Download_Enabled = ref(false);
 let timer;
 
-async function updateProgress() {
-  try {
-    const res = await fetch(`${ServerUrl}/progress?Key=${userKey.value}`);
-    const data = await res.json();
+
+let eventSource = null;
+
+const connectToSse = () => {
+  if (eventSource) eventSource.close(); // clean previous
+
+  eventSource = new EventSource(`${ServerUrl}/progress-sse?Key=${userKey.value}`);
+
+  eventSource.onmessage = (event) => {
+    const data = JSON.parse(event.data);
 
     jobs.value = data.map((job) => {
       if (!jobUrls[job.id]) jobUrls[job.id] = job.url;
-      // If completed, set downloaded = total and speed = 0
+
       const isCompleted = job.status === "completed";
       const downloaded = isCompleted ? job.total ?? 0 : job.downloaded ?? 0;
       const speed = isCompleted ? "0" : job.speed ?? "N/A";
@@ -109,13 +114,18 @@ async function updateProgress() {
         speed,
       };
     });
-  } catch (error) {
-    if (error?.message.includes("Not Found")) {
-      return;
-    }
-    handleNetworkError(error, "updateProgress");
-  }
-}
+  };
+
+  eventSource.onerror = (err) => {
+    console.warn("SSE error (will auto-reconnect)", err);
+    // Optional: handleNetworkError if you want
+  };
+};
+
+// Start SSE when userKey is ready
+watch(userKey, (newKey) => {
+  if (newKey) connectToSse();
+}, { immediate: true });
 
 
 
@@ -138,12 +148,14 @@ async function check_OS() {
 onMounted(() => {
   userKey.value = localStorage.getItem("MediaDownloaderUserKey");
   check_OS();
-  updateProgress();
-  timer = setInterval(updateProgress, 1500);
+  if (eventSource) eventSource.close();
 });
 
 
-onUnmounted(() => clearInterval(timer));
+onUnmounted(() => {
+  clearInterval(timer)
+  if (eventSource) eventSource.close();
+});
 
 
 let action_in_progress = ref(false);
@@ -351,7 +363,12 @@ function watchForProgress(id) {
   box-shadow: 0 0 10px #a855f755;
   position: relative;
   flex-wrap: wrap;
+  transition: transform .3s ease-in;
   animation: fadeIn 0.5s ease-in;
+}
+
+.download-card:hover{
+  cursor:pointer;
 }
 
 .thumbnail {
