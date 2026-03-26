@@ -5,15 +5,17 @@ using System.Text.Json.Serialization;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using Downloader_Backend.Logic;
+using System.Text.Json;
 
 namespace Downloader_Backend.Model
 {
 
-    public record FormatRequest(string Url);
+    public record FormatRequest(string Url, string Session_ID);
 
     public record DownloadRequest(string Url, string Format, string DownloadId, string Thumbnail = "", string Key = "");
 
     public record JobActionRequest(string JobId);
+    public record Cancel_Pause_Jobs_Request(bool Reload, string Session_ID);
 
     public class DownloadJob
     {
@@ -67,7 +69,59 @@ namespace Downloader_Backend.Model
     public class DownloadTracker
     {
         public ConcurrentDictionary<string, DownloadJob> Jobs { get; } = new();
+
+        private readonly ConcurrentDictionary<string, List<StreamWriter>> _sseConnections = new();
+
+        // ← ONE PLACE FOR CAMELCASE (used everywhere in SSE)
+        public readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
+        public void AddSseConnection(string key, StreamWriter writer)
+        {
+            var list = _sseConnections.GetOrAdd(key, _ => new List<StreamWriter>());
+            lock (list) list.Add(writer);
+        }
+
+        public void RemoveSseConnection(string key, StreamWriter writer)
+        {
+            if (_sseConnections.TryGetValue(key, out var list))
+            {
+                lock (list) list.Remove(writer);
+            }
+        }
+
+        public async Task NotifyJobUpdatedAsync(string key)
+        {
+            if (!_sseConnections.TryGetValue(key, out var connections) || connections.Count == 0)
+                return;
+
+            var userJobs = Jobs.Values
+                .Where(x => x.Key == key)
+                .ToList();
+
+            var json = JsonSerializer.Serialize(userJobs, JsonOptions);   // fetch user connection by its key and store current jobs in that connection. so multiple user can be manage.
+            var eventData = $"data: {json}\n\n";
+
+            var copy = connections.ToList();
+
+            foreach (var writer in copy)
+            {
+                try
+                {
+                    await writer.WriteAsync(eventData);
+                    await writer.FlushAsync();
+                }
+                catch
+                {
+                    RemoveSseConnection(key, writer);
+                }
+            }
+        }
     }
+
+
 
     public class File_Saver
     {
@@ -122,18 +176,13 @@ namespace Downloader_Backend.Model
         }
 
         // Cancel and dispose all token sources in storage
-        public void CancelAndDisposeAll()
+        public void CancelAndDisposeAll(string Session_ID)
         {
-            foreach (var kvp in _sources)
+            var Session_CTS = _sources.Where(cts => cts.Key.EndsWith(":" + Session_ID, StringComparison.Ordinal)).ToList();
+            foreach (var kvp in Session_CTS)
             {
-                var cts = kvp.Value;
-                if (!cts.IsCancellationRequested)
-                {
-                    cts?.Cancel();
-                }
-                cts?.Dispose();
+                RemoveTokenSource(kvp.Key);
             }
-            _sources.Clear();
         }
 
         // ❗ New method: remove from storage only (no cancel/dispose)
