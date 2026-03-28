@@ -306,7 +306,7 @@ namespace Downloader_Backend.Logic
                 }
 
                 // collect results first, then return
-                var success = proc.ExitCode == 0;                
+                var success = proc.ExitCode == 0;
                 var stdout = await outTask;
                 var stderr = await errTask;
 
@@ -320,10 +320,10 @@ namespace Downloader_Backend.Logic
             catch (Exception ex)
             {
                 string error = "";
-                if(ct.IsCancellationRequested)
-                error = "Get format / Title Cancelled By User and cancellation token get fired {ex}"+ ex.Message;
+                if (ct.IsCancellationRequested)
+                    error = "Get format / Title Cancelled By User and cancellation token get fired {ex}" + ex.Message;
                 else
-                error = "Get format / Title Cancelled By User and cancellation token get fired {ex}"+ ex.Message;
+                    error = "Get format / Title Cancelled By User and cancellation token get fired {ex}" + ex.Message;
                 //
                 _logger.LogError("Error occur in Get format / Title method {ex}", ex.Message);
                 throw;
@@ -454,10 +454,13 @@ namespace Downloader_Backend.Logic
 
                 var outputFile = Path.Combine(downloadsFolder, $"{job.Id}___{job.Title}.mp4");
 
-                linkedToken.Register(() =>
+                linkedToken.Register(async () =>
                 {
+                    if(job.Status != "completed")
                     job.Status = "canceled";
                     job.ErrorLog += "[INFO] Job canceled by user.\n";
+                    await _download_history.Save_And_UpdateJobAsync(job);
+                    await _tracker.NotifyJobUpdatedAsync(job.Key);
                     _logger.LogInformation("User Cancel the job: {req}", linkedToken.IsCancellationRequested);
                 });
 
@@ -511,6 +514,8 @@ namespace Downloader_Backend.Logic
                 {
                     job.ErrorLog += $"\n=== CACHE HIT → using saved chain: {cachedChain} ===\n";
                     job.Status = "using_cached_strategy";
+                    await history.Save_And_UpdateJobAsync(job);
+                    await tracker.NotifyJobUpdatedAsync(job.Key);
                     //
                     var cachedFullArgs = RebuildArgumentsFromChain(baseArgs, cachedChain);
                     overallSuccess = await ExecuteSingleAttemptAsync(job, linkedToken, globalCancellation, history, tracker, cachedFullArgs, resumeRequested, restartRequested, outputFile, tokenKey);
@@ -542,6 +547,8 @@ namespace Downloader_Backend.Logic
 
                         job.ErrorLog += $"\n=== ATTEMPT {attempt}/7 → {chainName} ===\n";
                         job.Status = $"attempting ({chainName})";
+                        await history.Save_And_UpdateJobAsync(job);
+                        await tracker.NotifyJobUpdatedAsync(job.Key);
                         /*                         await history.Save_And_UpdateJobAsync(job); */
 
                         bool successThisAttempt = await ExecuteSingleAttemptAsync(job, linkedToken, globalCancellation, history, tracker, escalatedArgs, resumeRequested, restartRequested, outputFile, tokenKey);
@@ -551,6 +558,7 @@ namespace Downloader_Backend.Logic
                             overallSuccess = true;
                             job.Status = "completed";
                             await history.Save_And_UpdateJobAsync(job);
+                            await tracker.NotifyJobUpdatedAsync(job.Key);
                         }
                         else
                         {
@@ -565,6 +573,7 @@ namespace Downloader_Backend.Logic
                     job.Status = "failed";
                     if (File.Exists(Strategy_File)) File.Delete(Strategy_File);
                     await history.Save_And_UpdateJobAsync(job);
+                    await tracker.NotifyJobUpdatedAsync(job.Key);
                     _logger.LogInformation("Download {JobId} exhausted all options", job.Id);
                 }
             }
@@ -573,6 +582,8 @@ namespace Downloader_Backend.Logic
                 _logger.LogError("Download caller Cancelled By User and cancelation token get fired helper {ex}", ex.Message);
                 job.ErrorLog += "[INFO] Attempt canceled by user.\n";
                 job.Status = "canceled";
+                await history.Save_And_UpdateJobAsync(job);
+                await tracker.NotifyJobUpdatedAsync(job.Key);
                 throw;
             }
             catch (Exception ex)
@@ -580,15 +591,17 @@ namespace Downloader_Backend.Logic
                 _logger.LogError("Downloading caller error occured: {er}", ex.Message);
                 job.ErrorLog += $"[EXCEPTION] {ex.Message}\n";
                 job.Status = "error occured";
+                await history.Save_And_UpdateJobAsync(job);
+                await tracker.NotifyJobUpdatedAsync(job.Key);
             }
             finally
             {
                 _logger.LogInformation("Download job of {job} completed, Going to cancel token", job.Title);
                 var Sc = job.TokenSource;
-                if( Sc != null)
+                if (Sc != null)
                 {
-                    if(!Sc.IsCancellationRequested)
-                    Sc?.Cancel();
+                    if (!Sc.IsCancellationRequested)
+                        Sc?.Cancel();
                     Sc?.Dispose();
                 }
                 job.DownloadTask = null;
@@ -644,7 +657,9 @@ namespace Downloader_Backend.Logic
                     job.ErrorLog += "[ERROR] Process failed to start.\n";
                     job.Status = "failed";
                     await _download_history.Save_And_UpdateJobAsync(job);
+                    await _tracker.NotifyJobUpdatedAsync(job.Key);
                     return false;
+
                 }
 
                 job.Process = proc;
@@ -658,7 +673,7 @@ namespace Downloader_Backend.Logic
                     {
                         var line = await proc.StandardError.ReadLineAsync(linkedToken);
                         if (!string.IsNullOrWhiteSpace(line))
-                        job.ErrorLog += "[stderr] " + line + "\n";
+                            job.ErrorLog += "[stderr] " + line + "\n";
                         job.Status = "Trying-err";
                         await _tracker.NotifyJobUpdatedAsync(job.Key);   // fire-and-forget, won't block download
                     }
