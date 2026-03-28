@@ -31,10 +31,10 @@ namespace Downloader_Backend.Model
         public string Thumbnail { get; set; } = "";
 
 
-        public long Total { get; set; } = 0;
-        public long Downloaded { get; set; } = 0;
-        public double Progress { get; set; } = 0.0;
-        public string Speed { get; set; } = "0 B/s";
+        public string Total { get; set; } = "0";
+        public string Downloaded { get; set; } = "0";
+        public double Progress { get; set; } = 0;
+        public string Speed { get; set; } = "0 B";
 
         public string ErrorLog { get; set; } = "nan";
 

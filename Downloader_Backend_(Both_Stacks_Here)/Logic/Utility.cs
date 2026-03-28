@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Downloader_Backend.Model;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Spectre.Console;
 
 namespace Downloader_Backend.Logic
@@ -82,13 +81,13 @@ namespace Downloader_Backend.Logic
             bool Is_From_Restart = Method_Caller == "Restart";
             bool Is_From_Broken_Resume = Method_Caller == "Broken_Resume";
             //
-            long Downloaded_Size = Is_From_Restart ? 0 : job.Downloaded;
+            string Downloaded_Size = Is_From_Restart ? "0" : job.Downloaded;
             double Progress = Is_From_Restart ? 0 : job.Progress;
             string Speed = Is_From_Restart ? "0 B" : job.Speed;
-            string Error_Logs = Is_From_Broken_Resume ? job.ErrorLog : "nan"; 
+            string Error_Logs = Is_From_Broken_Resume ? job.ErrorLog : "nan";
             CancellationTokenSource CTS = job.TokenSource ?? cts;
 
-            
+
             return new DownloadJob
             {
                 Id = job.Id,
@@ -435,34 +434,6 @@ namespace Downloader_Backend.Logic
         }
 
 
-        public double ParseHumanReadableSize(string input)
-        {
-            input = input.Trim();
-
-            var units = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "B", 1.0 / 1024 / 1024 },
-                { "KiB", 1.0 / 1024 },
-                { "MiB", 1 }, { "GiB", 1024 },
-                { "TiB", 1024 * 1024 }
-
-            };
-
-            foreach (var kvp in units)
-            {
-                if (input.EndsWith(kvp.Key))
-                {
-                    var numberPart = input[..^kvp.Key.Length].Trim();
-                    if (double.TryParse(numberPart, out var value))
-                        return value * kvp.Value;
-                }
-            }
-
-            return 0;
-        }
-
-
-
         public async Task<List<Format>> ParseStandardFormats(JsonElement root, string url, YT_Dlp_Strategy_Engine yt_Dlp_Strategy_Engine, CancellationToken cancellationToken)
         {
 
@@ -692,6 +663,98 @@ namespace Downloader_Backend.Logic
             return formats!;
         }
 
+
+
+        // Percent parser
+        public double ParsePercent(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return 0;
+
+            input = input.Trim();
+
+            // Remove % if present
+            input = input.TrimEnd('%').Trim();
+
+            if (double.TryParse(
+                input,
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var percent))
+            {
+                // Keep original decimals if present
+                return percent;
+            }
+
+            return 0;
+        }
+
+
+        // Normalize sizes and speeds
+        public string FormatSize(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return "Unknown";
+
+            input = input.Trim();
+
+            if (input.Contains("Unknown"))
+                return "Unknown";
+
+            if (input.Contains("N/A"))
+                return "Unknown";
+
+            return YT_dlp_Downloading_Regex().Replace(input, m =>
+            {
+                string num = m.Groups["num"].Value;
+                string unit = NormalizeUnit(m.Groups["unit"].Value);
+                string speed = m.Groups["speed"].Value;
+
+                return $"{num} {unit}{speed}";
+            });
+        }
+
+
+        // Normalize percent spacing
+        public string FormatPercent(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return "0 %";
+
+            input = input.Trim();
+
+            if (!input.Contains("%"))
+                return input;
+
+            return input.Replace("%", " %");
+        }
+
+
+        // Unit conversion KiB → KB
+        private string NormalizeUnit(string unit)
+        {
+            return unit switch
+            {
+                "KiB" => "KB",
+                "MiB" => "MB",
+                "GiB" => "GB",
+                "TiB" => "TB",
+                _ => unit
+            };
+        }
+
+
+        // Safe splitter
+        public string[] SplitProgress(string line)
+        {
+            if (line.Length <= 5)
+                return Array.Empty<string>();
+
+            return line[5..].Split('|');
+        }
+
+
+
         public string? GetYtDlpCompatibleBrowser()
         {
             static string? MapToSupportedBrowser(string id)
@@ -891,17 +954,25 @@ namespace Downloader_Backend.Logic
         [GeneratedRegex(@"\b(?:m3u8_native|h3u8|hls)\b", RegexOptions.IgnoreCase, "en-US")]
         private partial Regex MyRegex_1();
 
+
         [GeneratedRegex(@"^/r/[^/]+/comments/([^/]+)")]
         private static partial Regex MyRegex_2();
+
 
         [GeneratedRegex(@"^/posts/[^/?]+")]
         private static partial Regex MyRegex_3();
 
 
+
         [GeneratedRegex(@"\.(\d{2,4})p\.", RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-US")]
         private static partial Regex Resolution_regex();
 
+
         [GeneratedRegex(@"(\d+)p")]
         private static partial Regex Containe_resolution_Symbol_Regex();
+
+
+        [GeneratedRegex(@"(?<num>\d+(\.\d+)?)(?<unit>KiB|MiB|GiB|TiB|B)(?<speed>/s)?", RegexOptions.Compiled)]
+        private static partial Regex YT_dlp_Downloading_Regex();
     }
 }

@@ -456,8 +456,8 @@ namespace Downloader_Backend.Logic
 
                 linkedToken.Register(async () =>
                 {
-                    if(job.Status != "completed")
-                    job.Status = "canceled";
+                    if (job.Status != "completed")
+                        job.Status = "canceled";
                     job.ErrorLog += "[INFO] Job canceled by user.\n";
                     await _download_history.Save_And_UpdateJobAsync(job);
                     await _tracker.NotifyJobUpdatedAsync(job.Key);
@@ -695,15 +695,14 @@ namespace Downloader_Backend.Logic
                             var parts = line[5..].Split('|');
                             if (parts.Length >= 4)
                             {
-                                var pct = parts[0].TrimEnd('%', ' ');
-                                if (double.TryParse(pct, out var percent))
-                                {
-                                    job.Progress = percent;
-                                    job.LastProgressAt = DateTimeOffset.UtcNow;
-                                }
-                                job.Downloaded = (long)_utility.ParseHumanReadableSize(parts[1]);
-                                job.Total = (long)_utility.ParseHumanReadableSize(parts[2]);
-                                job.Speed = parts[3].Trim();
+                                // Percent
+                                job.Progress = _utility.ParsePercent(parts[0]);
+                                job.LastProgressAt = DateTimeOffset.UtcNow;
+                                // Display values
+                                job.Downloaded = _utility.FormatSize(parts[1]);
+                                job.Total =  _utility.FormatSize(parts[2]);
+                                job.Speed = _utility.FormatSize(parts[3]);
+
                                 job.Status = "downloading";
                                 await _tracker.NotifyJobUpdatedAsync(job.Key);   // fire-and-forget, won't block download
                             }
