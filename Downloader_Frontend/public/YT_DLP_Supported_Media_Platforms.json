@@ -3473,7 +3473,7 @@
         }
       ]
     },
-   /* {
+    {
       "id": 12,
       "title": "Adult Content",
       "description": "Mature content platforms and adult community sites.",
@@ -3695,7 +3695,7 @@
           "popularity": 54
         }
       ]
-    }, */
+    },
     {
       "id": 13,
       "title": "Lifestyle, Cooking & Regional Specialties",

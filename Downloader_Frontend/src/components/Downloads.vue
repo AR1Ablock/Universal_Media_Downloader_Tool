@@ -2,25 +2,14 @@
   <div>
     <h2 class="heading">Downloads</h2>
     <div id="downloads">
-      <div v-for="job in jobs" :key="job.id" class="download-card">
-        <img :src="job.thumbnail" class="thumbnail" />
 
-        <!-- small-screen overlay controls -->
-        <div class="right-controls small-overlay">
-          <button @click="copyUrl(job.id)" class="icon-button copy" title="Copy URL">
-            <i class="fas fa-copy" /> Copy
-          </button>
-          <button @click="deleteUI(job.id)" class="icon-button icon-delete-ui remove" title="Remove from UI"
-            :disabled="jobCooling[job.id]">
-            <i class="fas fa-times" />
-          </button>
-        </div>
+      <draggable v-model="jobs" item-key="id" @end="saveOrder">
+        <template #item="{ element: job, index }">
+          <div class="download-card">
+            <img :src="job.thumbnail" class="thumbnail" />
 
-        <div class="info">
-          <div class="top-controls">
-            <div class="title">{{ job.title }}</div>
-            <!-- keep the normal controls for desktop -->
-            <div class="right-controls desktop-only">
+            <!-- small-screen overlay controls -->
+            <div class="right-controls small-overlay">
               <button @click="copyUrl(job.id)" class="icon-button copy" title="Copy URL">
                 <i class="fas fa-copy" /> Copy
               </button>
@@ -29,56 +18,75 @@
                 <i class="fas fa-times" />
               </button>
             </div>
+
+            <div class="info">
+              <div class="top-controls">
+                <div class="title">{{ job.title }}</div>
+                <!-- keep the normal controls for desktop -->
+                <div class="right-controls desktop-only">
+                  <button @click="copyUrl(job.id)" class="icon-button copy" title="Copy URL">
+                    <i class="fas fa-copy" /> Copy
+                  </button>
+                  <button @click="deleteUI(job.id)" class="icon-button icon-delete-ui remove" title="Remove from UI"
+                    :disabled="jobCooling[job.id]">
+                    <i class="fas fa-times" />
+                  </button>
+                </div>
+              </div>
+
+              <div class="progress-bar-container">
+                <div class="progress-bar" :style="{ width: (job.progress?.toFixed(2) ?? 0) + '%' }" />
+              </div>
+
+              <div class="details">
+                <span>{{ job.downloaded }} / {{ job.total }}</span>
+                <span>Speed: {{ job.speed }}</span>
+                <span>Progress: {{ job.progress?.toFixed(2) ?? 0 }}%</span>
+                <span>Job: {{ job.status }}</span>
+              </div>
+
+              <div class="buttons">
+                <button @click="pause(job.id)" class="btn pause"
+                  :disabled="jobCooling[job.id] || job.status == 'completed'">
+                  <i class="fas fa-pause" /> Pause
+                </button>
+                <button @click="resume(job.id)" class="btn resume"
+                  :disabled="jobCooling[job.id] || job.status == 'completed'">
+                  <i class="fas fa-play" /> Resume
+                </button>
+                <button @click="restart(job.id)" class="btn restart"
+                  :disabled="jobCooling[job.id] || job.status == 'completed'">
+                  <i class="fas fa-redo" /> Restart
+                </button>
+                <button @click="newUrl(job.id)" class="btn resume_broken"
+                  :disabled="jobCooling[job.id] || job.status == 'completed'">
+                  <i class="fas fa-link" /> Fix URL
+                </button>
+                <button @click="deleteFile(job.id)" class="btn delete icon-delete-file" :disabled="jobCooling[job.id]">
+                  <i class="fas fa-trash" /> Delete File
+                </button>
+                <button v-if="Is_Download_Enabled" @click="downloadFile(job.id)" class="btn download"
+                  :disabled="job.status !== 'completed'">
+                  <i class="fas fa-download"></i> Download
+                </button>
+                <button @click="Open_File_Directory(job.id)" class="btn download"
+                  :disabled="job.status !== 'completed'">
+                  <i class="fas fa-folder-open"></i> Open
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div class="progress-bar-container">
-            <div class="progress-bar" :style="{ width: (job.progress?.toFixed(2) ?? 0) + '%' }" />
-          </div>
-
-          <div class="details">
-            <span>{{ job.downloaded }} MB / {{ job.total }} MB</span>
-            <span>Speed: {{ job.speed
-            }}{{ job.speed !== "N/A" && job.speed !== "0" ? "/s" : "" }}</span>
-            <span>Progress: {{ job.progress?.toFixed(2) ?? 0 }}%</span>
-            <span>Job: {{ job.status }}</span>
-          </div>
-
-          <div class="buttons">
-            <button @click="pause(job.id)" class="btn pause"
-              :disabled="jobCooling[job.id] || job.status == 'completed'">
-              <i class="fas fa-pause" /> Pause
-            </button>
-            <button @click="resume(job.id)" class="btn resume"
-              :disabled="jobCooling[job.id] || job.status == 'completed'">
-              <i class="fas fa-play" /> Resume
-            </button>
-            <button @click="restart(job.id)" class="btn restart"
-              :disabled="jobCooling[job.id] || job.status == 'completed'">
-              <i class="fas fa-redo" /> Restart
-            </button>
-            <button @click="newUrl(job.id)" class="btn resume_broken"
-              :disabled="jobCooling[job.id] || job.status == 'completed'">
-              <i class="fas fa-link" /> Fix URL
-            </button>
-            <button @click="deleteFile(job.id)" class="btn delete icon-delete-file" :disabled="jobCooling[job.id]">
-              <i class="fas fa-trash" /> Delete File
-            </button>
-            <button v-if="Is_Download_Enabled" @click="downloadFile(job.id)" class="btn download"
-              :disabled="job.status !== 'completed'">
-              <i class="fas fa-download"></i> Download
-            </button>
-            <button @click="Open_File_Directory(job.id)" class="btn download" :disabled="job.status !== 'completed'">
-              <i class="fas fa-folder-open"></i> Open
-            </button>
-          </div>
-        </div>
-      </div>
+        </template>
+      </draggable>
     </div>
+
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, watch } from "vue";
+import draggable from 'vuedraggable'
 
 const jobs = ref([]);
 const jobUrls = reactive({});
@@ -114,6 +122,7 @@ const connectToSse = () => {
         speed,
       };
     });
+    loadOrder();
   };
 
   eventSource.onerror = (err) => {
@@ -122,10 +131,31 @@ const connectToSse = () => {
   };
 };
 
+
+
 // Start SSE when userKey is ready
 watch(userKey, (newKey) => {
-  if (newKey) connectToSse();
+  if (newKey) {
+    connectToSse();
+  }
 }, { immediate: true });
+
+
+
+const saveOrder = () => {
+  localStorage.setItem('jobOrder', JSON.stringify(jobs.value.map(j => j.id)));
+};
+
+
+const loadOrder = () => {
+  const savedOrder = JSON.parse(localStorage.getItem('jobOrder') || '[]');
+  if (!savedOrder.length) return; 
+
+  const orderedJobs = savedOrder.map(id => jobs.value.find(job => job.id === id)).filter(Boolean);
+  const newJobs = jobs.value.filter(job => !savedOrder.includes(job.id));
+  jobs.value = [...orderedJobs, ...newJobs];
+};
+
 
 
 
@@ -367,8 +397,10 @@ function watchForProgress(id) {
   animation: fadeIn 0.5s ease-in;
 }
 
-.download-card:hover{
-  cursor:pointer;
+.download-card:hover {
+  cursor: pointer;
+  transform: scale(1.02);
+  transition: all .3s ease-out;
 }
 
 .thumbnail {
