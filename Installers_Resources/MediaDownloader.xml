@@ -36,9 +36,11 @@
   <Actions Context="Author">
     <Exec>
       <Command>%ProgramFiles%\MediaDownloader\Downloader_Backend.exe</Command>
+	   <Arguments>--service</Arguments>
     </Exec>
     <Exec>
       <Command>%ProgramFiles(x86)%\MediaDownloader\Downloader_Backend.exe</Command>
+	   <Arguments>--service</Arguments>
     </Exec>
   </Actions>
 </Task>
