@@ -287,8 +287,12 @@ namespace Downloader_Backend.Logic
             try
             {
 
-                var (ytDlpPath, _, _, _) = _utility.Local_Executables_Path();
+                var temp_working_dir = Path.Combine(Utility.Create_Path(Making_Logs_Path: true), "yt-dlp-temp");
+                if(!Directory.Exists(temp_working_dir))
+                Directory.CreateDirectory(temp_working_dir);
+                _logger.LogInformation("Created temporary working directory for yt-dlp: {TempDir}", temp_working_dir);
 
+                var (ytDlpPath, _, _, _) = _utility.Local_Executables_Path();
                 _logger.LogInformation("yt-dlp executable path: {Path}", ytDlpPath);
                 _logger.LogInformation("Launching yt-dlp with arguments: {Args}", string.Join(' ', args));
 
@@ -297,6 +301,7 @@ namespace Downloader_Backend.Logic
                     FileName = ytDlpPath,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
+                    WorkingDirectory = temp_working_dir,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     WindowStyle = ProcessWindowStyle.Hidden,
