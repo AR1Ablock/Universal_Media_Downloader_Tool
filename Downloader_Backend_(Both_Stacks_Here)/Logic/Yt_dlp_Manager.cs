@@ -229,27 +229,39 @@ namespace Downloader_Backend.Logic
             string StdErr = "";
             try
             {
+                _logger.LogInformation("Starting adaptive escalation execution with base arguments: {BaseArgs}", string.Join(' ', baseArguments));
+
+
                 var accumulated = new List<string>(baseArguments);
                 var applied = new List<string>();
                 var chainLog = new List<string>();
 
                 for (int attempt = 0; attempt <= _registry.Count; attempt++)
                 {
+                    _logger.LogInformation("Adaptive escalation attempt {Attempt} with arguments: {Args}", attempt, string.Join(' ', accumulated));
+
                     (Success, StdOut, StdErr) = await ExecuteYtDlpProcessCoreAsync([.. accumulated], ct);
+
+                    _logger.LogInformation("Execution completed with Success: {Success}", Success);
 
                     if (Success)
                         return (true, StdOut, StdErr, string.Join(" → ", chainLog));
 
                     var normError = StdErr.ToLowerInvariant();
 
+                    _logger.LogInformation("Normalized error for decision making: {NormError}", normError);
+
                     if (PermanentErrorTriggers.Any(t => normError.Contains(t, StringComparison.OrdinalIgnoreCase))) throw new InvalidOperationException("MEDIA_PERMANENT_ERROR");
 
                     var (newArgs, chain) = ComputeCumulativeStrategyArguments([.. accumulated], normError, applied, allowCookies);
+
+                    _logger.LogInformation("Computed new arguments for next attempt: {NewArgs} | Strategy Chain: {Chain}", string.Join(' ', newArgs), chain);
 
                     accumulated = [.. newArgs];
                     chainLog.Add(chain);
                 }
 
+                _logger.LogInformation("All paths exhausted, Final error: {StdErr}", StdErr);
                 return (false, "", $"All paths exhausted: {StdErr}", string.Join(" → ", chainLog));
             }
             catch (OperationCanceledException ex)
@@ -276,6 +288,10 @@ namespace Downloader_Backend.Logic
             {
 
                 var (ytDlpPath, _, _, _) = _utility.Local_Executables_Path();
+
+                _logger.LogInformation("yt-dlp executable path: {Path}", ytDlpPath);
+                _logger.LogInformation("Launching yt-dlp with arguments: {Args}", string.Join(' ', args));
+
                 var psi = new ProcessStartInfo()
                 {
                     FileName = ytDlpPath,
@@ -302,6 +318,7 @@ namespace Downloader_Backend.Logic
 
                 if (completed == timeoutTask && !ct.IsCancellationRequested)
                 {
+                    _logger.LogInformation("yt-dlp process timed out after {Timeout} seconds", timeout.TotalSeconds);
                     throw new TimeoutException($"server {timeout.TotalSeconds} seconds response timeout.");
                 }
 
@@ -309,6 +326,8 @@ namespace Downloader_Backend.Logic
                 var success = proc.ExitCode == 0;
                 var stdout = await outTask;
                 var stderr = await errTask;
+
+                _logger.LogInformation("yt-dlp process finished with exit code {ExitCode} | Success: {Success}", proc.ExitCode, success);
 
                 return (success, stdout, stderr);
             }
@@ -332,10 +351,15 @@ namespace Downloader_Backend.Logic
             {
                 if (_processControl.TryGetPid(proc, out var pid))
                 {
+                    _logger.LogInformation("Attempting to kill yt-dlp process tree with PID: {Pid}", pid);
+                    //
                     var tree = _processControl.GetProcessTree(pid);
                     _processControl.KillProcessTree(tree);
+                    //
+                    _logger.LogInformation("Successfully killed yt-dlp process tree with root PID: {Pid}", pid);
                 }
                 if (proc != null && proc.HasExited) proc?.Dispose();
+                _logger.LogInformation("yt-dlp process cleanup completed.");
             }
         }
 
@@ -346,6 +370,8 @@ namespace Downloader_Backend.Logic
             try
             {
                 var baseArgs = GetTitleArgs(mediaUrl);
+
+                _logger.LogInformation("Starting title extraction for URL: {Url}", mediaUrl);
 
                 var (success, stdout, _, chain) = await ExecuteWithFullAdaptiveEscalationAsync(baseArgs, cancellationToken, allowCookies: true);
 
@@ -379,15 +405,20 @@ namespace Downloader_Backend.Logic
             {
                 var baseArgs = GetFormatArgs(url);
 
+                _logger.LogInformation("Starting format extraction in yt-dlp class for URL: {Url}", url);
+
 
                 if (_fileSaver.fileMap.TryGetValue("Strategy_File", out string? Strategy_File))
                     if (!string.IsNullOrWhiteSpace(Strategy_File))
                     {
+                        _logger.LogInformation("Checking for cached strategy file at: {Strategy_File}", Strategy_File);
                         if (File.Exists(Strategy_File))
                         {
+                            _logger.LogInformation("Strategy file found. Reading contents for URL: {Url}", url);
                             string res = File.ReadAllText(Strategy_File);
                             if (!string.IsNullOrWhiteSpace(res))
                             {
+                                _logger.LogInformation("Strategy file content read successfully. Validating URL match for cached strategy.");
                                 var stored_url = res.Split(',')[0];
                                 if (stored_url == url)
                                     cache_args = res;
@@ -397,24 +428,34 @@ namespace Downloader_Backend.Logic
 
                 if (!string.IsNullOrWhiteSpace(cache_args))
                 {
+                    _logger.LogInformation("Cached strategy found for URL: {Url}. Rebuilding arguments from cache and executing.", url);
                     var cachedArg = RebuildArgumentsFromChain(baseArgs, cache_args);
                     (success, stdOut, stdErr, chain) = await ExecuteWithFullAdaptiveEscalationAsync(cachedArg, ct, allowCookies: true);
+                    _logger.LogInformation("Cached strategy execution completed for URL: {Url} | Success: {Success} | Chain: {Chain}", url, success, chain);
                 }
                 else
                 {
+                    _logger.LogInformation("No valid cached strategy found for URL: {Url}. Starting full adaptive escalation.", url);
                     (success, stdOut, stdErr, chain) = await ExecuteWithFullAdaptiveEscalationAsync(baseArgs, ct, allowCookies: true);
                 }
 
 
                 loginRequired = CookieTriggers.Any(trigger => stdErr.Contains(trigger, StringComparison.OrdinalIgnoreCase));
+                _logger.LogInformation("Login requirement check for URL: {Url} | Login Required: {LoginRequired}", url, loginRequired);
+
 
                 if (success)
                 {
+                    _logger.LogInformation("Media info extracted successfully for URL: {Url} | Chain: {Chain}", url, chain);
                     if (!string.IsNullOrEmpty(chain))
                     {
+                        _logger.LogInformation("Writing successful strategy chain to title file for URL: {Url}", url);
+                        ///
                         Path.Combine(_fileSaver.fileMap["Strategy_File"], "Strategy_File.txt");
                         string cache_to_write = $"{url}, {chain}";
                         File.WriteAllText(_fileSaver.fileMap["Strategy_File"], cache_to_write);
+
+                        _logger.LogInformation("Strategy chain written to title file for URL: {Url} | Chain: {Chain}", url, chain);
                     }
                     _logger.LogInformation("Media info extracted with chain: {Chain}", chain);
                     return (true, stdOut, stdErr, false);
@@ -422,6 +463,8 @@ namespace Downloader_Backend.Logic
 
                 if (PermanentErrorTriggers.Any(trigger => stdErr.Contains(trigger, StringComparison.OrdinalIgnoreCase)))
                 {
+                    _logger.LogError("Permanent error occurred for URL: {Url}. Error: {Error}", url, stdErr);
+
                     throw new InvalidOperationException("MEDIA_PERMANENT_ERROR: This media is permanently unavailable, private, age-restricted, or geo-blocked.");
                 }
 
@@ -700,7 +743,7 @@ namespace Downloader_Backend.Logic
                                 job.LastProgressAt = DateTimeOffset.UtcNow;
                                 // Display values
                                 job.Downloaded = _utility.FormatSize(parts[1]);
-                                job.Total =  _utility.FormatSize(parts[2]);
+                                job.Total = _utility.FormatSize(parts[2]);
                                 job.Speed = _utility.FormatSize(parts[3]);
 
                                 job.Status = "downloading";

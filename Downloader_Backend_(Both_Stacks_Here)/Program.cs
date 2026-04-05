@@ -181,7 +181,7 @@ app.MapFallbackToFile("index.html");
 
 
 /* 
-dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true
+dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
  */
 
 
@@ -198,10 +198,11 @@ try
 
         if (Port_Killer.Is_Our_Backend_Running(Port))
         {
+            Log.Information("---> Our backend is already running → opening browser and quitting this instance.");
             // OUR backend (service or previous instance) is already running
             utility.OpenBrowser($"http://localhost:{Port}/index.html");
 
-            Log.Information("---> Our backend is already running → opened browser and exiting this instance.");
+            Log.Information("---> App local host opened in browser completed");
 
             return; // exit cleanly — do not start another server
         }
@@ -222,6 +223,7 @@ try
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) await app.RunAsync();
         //
         await utility.WaitForBackendAsync(Port, Port_Killer); // wait for max 10s for backend to run.
+        Log.Information("--->New Backend is now started, opening browser now...");
         utility.OpenBrowser($"http://localhost:{Port}/index.html");
         return;
     }
@@ -236,6 +238,7 @@ try
             return;
         }
         await app.RunAsync();
+        Log.Information("App is started in service mode...");
     }
 
 }

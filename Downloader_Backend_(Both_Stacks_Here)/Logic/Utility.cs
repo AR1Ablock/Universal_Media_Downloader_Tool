@@ -249,20 +249,27 @@ namespace Downloader_Backend.Logic
 
         public void Checking_And_Starting_Linux_Service()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                return;
-
-            var state = Run_Open_Media_Directory_Process("systemctl", "--user is-active mediadownloader").Trim().ToLower();
-
-            _logger.LogInformation("Systemd state: {State}", state);
-
-            if (state != "active" && state != "activating")
+            try
             {
-                Run_Open_Media_Directory_Process("systemctl", "--user daemon-reload");
-                Run_Open_Media_Directory_Process("systemctl", "--user enable --now mediadownloader");
-                Run_Open_Media_Directory_Process("systemctl", "--user daemon-reload");
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    return;
 
-                _logger.LogInformation("Systemd user service enabled and started.");
+                var state = Run_Open_Media_Directory_Process("systemctl", "--user is-active mediadownloader").Trim().ToLower();
+
+                _logger.LogInformation("Systemd state: {State}", state);
+
+                if (state != "active" && state != "activating")
+                {
+                    Run_Open_Media_Directory_Process("systemctl", "--user daemon-reload");
+                    Run_Open_Media_Directory_Process("systemctl", "--user enable --now mediadownloader");
+                    Run_Open_Media_Directory_Process("systemctl", "--user daemon-reload");
+
+                    _logger.LogInformation("Systemd user service enabled and started.");
+                }
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("[red]Error checking or starting Linux service method failed. Please ensure systemd is available and properly configured.[/]");
             }
         }
 
@@ -300,7 +307,7 @@ namespace Downloader_Backend.Logic
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to open media directory: {Error}", ex.Message);
+                _logger.LogError(ex, $"Failed to run {fileName} with {arguments} directory: {ex.Message}");
                 return $"Exception: {ex.Message}";
             }
             finally

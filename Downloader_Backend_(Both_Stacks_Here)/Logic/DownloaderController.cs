@@ -27,11 +27,15 @@ namespace Downloader_Backend.Logic
         [HttpPost("formats")]
         public async Task<IActionResult> GetFormats([FromBody] FormatRequest req)
         {
+            _logger.LogInformation("\n\nReceived format request for URL: {Url}", req.Url);
+
             var Token_Key = _globalCancellation.GenerateKey();
             var Unique_Key = $"{Token_Key}:{req.Session_ID}";
             //
             var Token_Source = _globalCancellation.CreateTokenSource(Unique_Key);
             var token = Token_Source.Token;
+
+            _logger.LogInformation("Created cancellation token for format request with key: {Unique_Key}", Unique_Key);
 
             try
             {
@@ -42,6 +46,8 @@ namespace Downloader_Backend.Logic
                     return BadRequest("Invalid URL provided.");
                 }
 
+                _logger.LogInformation("Now going to call real Fetching formats for URL: {Url}", url);
+
                 var (success, output, error, loginRequired) = await _yt_Dlp_Strategy_Engine.Get_Formats_Helper(url, token);
 
                 if (!success)
@@ -50,18 +56,23 @@ namespace Downloader_Backend.Logic
                     {
                         return Ok(new { Url = new Uri(url).GetLeftPart(UriPartial.Authority), loginRequired = true, message = "Login required to fetch formats." });
                     }
-
+                    _logger.LogError("yt-dlp failed to fetch formats for URL: {Url}. Error: {Error}", url, error);
                     return BadRequest($"yt-dlp failed: {error}");
                 }
 
                 using var doc = JsonDocument.Parse(output);
+                _logger.LogInformation("Successfully fetched formats for URL: {Url}. Now parsing output completed.", url);
                 var root = doc.RootElement;
 
                 string extractor = root.GetProperty("extractor_key").GetString()?.ToLower() ?? "";
 
+                _logger.LogInformation("Extractor identified as: {Extractor} for URL: {Url}", extractor, url);
+
                 List<Format> formats = extractor.Contains("facebook")
                     ? await _utility.ParseFacebookFormats(root, req.Url, _yt_Dlp_Strategy_Engine, token)
                     : await _utility.ParseStandardFormats(root, req.Url, _yt_Dlp_Strategy_Engine, token);
+
+                    _logger.LogInformation("Parsed {FormatCount} formats for URL: {Url}", formats.Count, url);
 
                 return Ok(formats);
             }
@@ -73,7 +84,7 @@ namespace Downloader_Backend.Logic
             }
             finally
             {
-                _logger.LogInformation("fetching formats done, Going to cancel token");
+                _logger.LogInformation("fetching formats done, Going to cancel token\n\n");
                 _globalCancellation.RemoveTokenSource(Unique_Key);
             }
 
