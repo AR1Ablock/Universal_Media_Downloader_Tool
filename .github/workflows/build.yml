@@ -99,7 +99,7 @@ jobs:
               cp ffmpeg-*/bin/ffmpeg.exe publish/tools/windows/x64/ffmpeg_win_x64.exe
             else
               choco install 7zip -y --no-progress || true
-              curl -L https://github.com/tordona/ffmpeg-win-arm64/releases/download/latest/ffmpeg-master-latest-full-static-win-arm64.7z -o ffmpeg_win_arm64.7z
+              curl -L https://github.com/tordona/ffmpeg-win-arm64/releases/latest/download/ffmpeg-master-latest-full-static-win-arm64.7z -o ffmpeg_win_arm64.7z
               7z x ffmpeg_win_arm64.7z -oextracted -y >/dev/null 2>&1
               cp extracted/ffmpeg.exe publish/tools/windows/arm64/ffmpeg_win_arm64.exe \
                 || cp extracted/bin/ffmpeg.exe publish/tools/windows/arm64/ffmpeg_win_arm64.exe \
