@@ -87,6 +87,7 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, watch } from "vue";
 import draggable from 'vuedraggable'
+import {notify} from "./Toast.vue";
 
 const jobs = ref([]);
 const jobUrls = reactive({});
@@ -221,11 +222,11 @@ async function Open_File_Directory(id) {
     const json = await res.json();
 
     if (json.message && json.message.includes("not found")) {
-      alert(json.message);
+      notify(json.message, "error");
     }
   } catch (err) {
     console.error("Failed to open file directory", err);
-    alert("Error: could not open folder");
+    notify("Error: could not open folder", "error");
   }
 }
 
@@ -252,7 +253,7 @@ async function newUrl(id) {
       watchForProgress(id, prev);
       await postAction("resume-new-url", { jobId: id, newUrl: url.trim() });
     } else {
-      alert("No URL entered. Resume cancelled.");
+      notify("No URL entered. Resume cancelled.", "info");
     }
   } catch (error) {
     console.log(error.message);
@@ -266,10 +267,10 @@ function copyUrl(id) {
   if (text) {
     navigator.clipboard
       .writeText(text)
-      .then(() => alert("✅ Video URL copied!"))
-      .catch(() => alert("❌ Failed to copy"));
+      .then(() => notify("✅ Video URL copied!", "success"))
+      .catch(() => notify("❌ Failed to copy", "error"));
   } else {
-    alert("⚠️ Original URL not found.");
+    notify("⚠️ Original URL not found.", "info");
   }
 }
 
@@ -291,7 +292,7 @@ async function downloadFile(jobId) {
     a.remove();
   } catch (error) {
     console.error("Download error:", error);
-    alert("Something went wrong while downloading.");
+    notify("Something went wrong while downloading.", "error");
   } finally {
     action_in_progress.value = false;
   }
@@ -313,7 +314,7 @@ function handleNetworkError(error, context = "action") {
 
   const now = Date.now();
   if (!lastNetworkErrorTime || now - lastNetworkErrorTime > NETWORK_ERROR_PAUSE_MS) {
-    alert(message);
+    notify(message, "error");
     lastNetworkErrorTime = now;
   }
   console.error(`Error during ${context}:`, error.message);

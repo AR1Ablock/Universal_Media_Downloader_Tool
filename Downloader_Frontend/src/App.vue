@@ -1,4 +1,5 @@
 <template>
+  <Toast />
   <header>
     <h1>🚀 Media Downloader</h1>
     <!-- Desktop Sign Out Button -->
@@ -28,7 +29,7 @@
           <div class="rows">
             <div class="row">
               <input v-model="url" @keydown.enter.prevent="getFormats" @paste="onPaste" type="text"
-                placeholder="Paste video URL..." autofocus required :class="{ edge_formInput: Is_Browser_Edge }" />
+                placeholder="Paste Video URL..." autofocus required :class="{ edge_formInput: Is_Browser_Edge }" />
               <button :disabled="loadingFormats || loadingDownload" @click="getFormats" class="btn" :class="[
                 { readjust_btn: loadingFormats },
                 { 'error-btn': Is_Format_Error },
@@ -118,6 +119,7 @@
 import { ref, reactive, onMounted, onBeforeUnmount, watch, onUnmounted } from "vue";
 import Download from "./components/Downloads.vue";
 import Login from "./components/Login.vue";
+import Toast, { notify } from "./components/Toast.vue";
 
 function openit() {
   window.open('/Supported_Site.html', '_blank')
@@ -184,7 +186,7 @@ async function getFormats() {
     Is_Format_Error.value = true;
     setTimeout(() => {
       Is_Format_Error.value = false;
-      alert("Network is offline, Cant get media info.");
+      notify("Network is offline, Cant get media info.", "error");
     }, 600);
     return;
   }
@@ -193,7 +195,7 @@ async function getFormats() {
     Is_Format_Error.value = true;
     setTimeout(() => {
       Is_Format_Error.value = false;
-      alert("Please enter a valid URL.");
+      notify("Please enter a valid URL.", "info");
     }, 600);
     return;
   }
@@ -217,7 +219,7 @@ async function getFormats() {
       Is_Format_Error.value = true;
       setTimeout(() => {
         Is_Format_Error.value = false;
-        window.alert(data.message || "Incorrect URL / Login required");
+        notify(data.message || "Incorrect URL / Login required", "info");
         window.open(data.url, "_blank");
       }, 600);
       return;
@@ -228,7 +230,7 @@ async function getFormats() {
       Is_Format_Error.value = true;
       setTimeout(() => {
         Is_Format_Error.value = false;
-        alert("No Media Format Found.");
+        notify("No Media Format Found.", "info");
       }, 600);
       return;
     }
@@ -279,7 +281,7 @@ async function startDownload() {
     Is_Downlaod_Error.value = true;
     setTimeout(() => {
       Is_Downlaod_Error.value = false;
-      alert("Network is offline, Cant Download media.");
+      notify("Network is offline, Cant Download media.", "error");
     }, 600);
     return;
   }
@@ -289,7 +291,7 @@ async function startDownload() {
     Is_Downlaod_Error.value = true;
     setTimeout(() => {
       Is_Downlaod_Error.value = false;
-      alert("Please enter a valid URL.");
+      notify("Please enter a valid URL.", "info");
     }, 600);
     return;
   }
@@ -311,7 +313,7 @@ async function startDownload() {
       Is_Downlaod_Error.value = true;
       setTimeout(() => {
         Is_Downlaod_Error.value = false;
-        alert("Please select format.");
+        notify("Please select format.", "info");
       }, 600);
       return;
     }
@@ -373,7 +375,7 @@ function handleNetworkError(error, context = "action", method) {
     setTimeout(() => {
       if (method == "D") Is_Downlaod_Error.value = false;
       else if (method == "F") Is_Format_Error.value = false;
-      alert(message);
+      notify(message, "error");
     }, 600);
     lastNetworkErrorTime = now;
   }

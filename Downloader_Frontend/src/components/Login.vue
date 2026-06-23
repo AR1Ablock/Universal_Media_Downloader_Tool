@@ -58,6 +58,7 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
+import { notify } from "./Toast.vue";
 const emit = defineEmits(["logged-in"]);
 let tempKey = "";
 const username = ref("");
@@ -86,7 +87,7 @@ function focusPassword() {
 
 async function prepareLogin() {
   if (!username.value || !password.value) {
-    alert("Please enter both username and password.");
+    notify("Please enter both username and password.", "error");
     return;
   }
   loggingIn.value = true;
@@ -95,7 +96,7 @@ async function prepareLogin() {
     showModal.value = true;
   } catch (err) {
     console.error(err);
-    alert("Login failed; please try again.");
+    notify("Login failed; please try again.", "error");
   } finally {
     loggingIn.value = false;
   }
