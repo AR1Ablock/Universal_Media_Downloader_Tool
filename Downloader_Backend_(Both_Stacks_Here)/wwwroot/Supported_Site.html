@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Supported Platforms</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="wrapper">
+
+<div class="title">
+<h1>Supported Platforms</h1>
+<p>yt-dlp powered universal media downloader</p>
+</div>
+
+<div id="platformContainer"></div>
+
+</div>
+
+
+<script type="module">
+let res = await fetch('/YT_DLP_Supported_Media_Platforms.json');
+let data = await res.json()
+
+async function loadPlatforms(){
+
+ 
+const container=document.getElementById("platformContainer")
+
+data.categories.forEach(cat=>{
+
+cat.platforms.sort((a,b)=>a.popularity-b.popularity)
+
+const section=document.createElement("div")
+section.className="category"
+
+section.innerHTML=`
+
+<h2>${cat.title}</h2>
+<p>${cat.description || ""}</p>
+
+<div class="platform-grid">
+
+${cat.platforms.map(p=>`
+
+<div class="platform">
+
+<div class="platform-name">${p.name}</div>
+
+${p.note ? `<div class="platform-note">${p.note}</div>` : ""}
+
+</div>
+
+`).join("")}
+
+</div>
+
+`
+
+container.appendChild(section)
+
+})
+
+}
+
+loadPlatforms();
+
+</script>
+
+</body>
+</html>
+
+
+<style>
+
+:root{
+--bg1:#161629;
+--bg2:#0e0e1f;
+--card:#1d1d35;
+--accent:#6b5cff;
+--accent2:#9f7aea;
+--text:#e7e7ff;
+--muted:#a0a0d0;
+}
+
+*{
+box-sizing:border-box;
+margin:0;
+padding:0;
+}
+
+body{
+font-family:Inter,sans-serif;
+background:linear-gradient(160deg,var(--bg1),var(--bg2));
+color:var(--text);
+}
+
+/* container */
+
+.wrapper{
+width:min(90%,1400px);
+margin:auto;
+padding-top:40px;
+padding-bottom:80px;
+}
+
+/* title */
+
+.title{
+text-align:center;
+margin-bottom:50px;
+}
+
+.title h1{
+font-size:clamp(1.4rem,3vw,2.5rem);
+color:#b8b6ff;
+}
+
+.title p{
+color:var(--muted);
+margin-top:10px;
+}
+
+/* category */
+
+.category{
+margin-bottom:80px;
+}
+
+.category h2{
+font-size:clamp(1.2rem,2vw,1.6rem);
+margin-bottom:6px;
+color:#c7c6ff;
+}
+
+.category p{
+color:var(--muted);
+margin-bottom:18px;
+font-size:.9rem;
+}
+
+/* grid */
+
+.platform-grid{
+display:grid;
+gap:14px;
+grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+}
+
+/* card */
+
+.platform{
+background:var(--card);
+border-radius:10px;
+padding:14px 12px;
+text-align:center;
+border:1px solid rgba(255,255,255,0.05);
+transition:.25s;
+min-height:60px;
+
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+
+overflow:hidden;
+}
+
+.platform:hover{
+transform:translateY(-3px);
+border-color:var(--accent);
+box-shadow:0 6px 20px rgba(0,0,0,.4);
+}
+
+/* name */
+
+.platform-name{
+font-size:.95rem;
+font-weight:500;
+word-break:break-word;
+}
+
+/* note */
+
+.platform-note{
+font-size:.72rem;
+color:var(--muted);
+margin-top:3px;
+}
+
+/* ultra small devices */
+
+@media(max-width:420px){
+
+.wrapper{
+width:92%;
+}
+
+.platform-grid{
+grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+gap:10px;
+}
+
+.platform{
+padding:12px 8px;
+}
+
+}
+
+/* tablets */
+
+@media(min-width:768px){
+
+.wrapper{
+width:88%;
+}
+
+.platform-grid{
+grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+}
+
+}
+
+/* desktop */
+
+@media(min-width:1200px){
+
+.platform-grid{
+grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+}
+
+}
+
+/* 4k / ultrawide */
+
+@media(min-width:2200px){
+
+.wrapper{
+max-width:2200px;
+}
+
+.platform-grid{
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:18px;
+}
+
+.platform-name{
+font-size:1.05rem;
+}
+
+}
+
+</style>
